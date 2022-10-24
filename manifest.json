@@ -10,6 +10,7 @@
     "128": "images/icon-128.png"
   },
   "action": {
+    "default_popup": "menu/popup.html",
     "default_icon": {
       "16": "images/icon-16.png",
       "32": "images/icon-32.png",
@@ -18,7 +19,7 @@
     }
   },
   "background": {
-    "service_worker": "scripts/background.js"
+    "service_worker": "background/background.js"
   },
   "content_scripts": [
     {
@@ -26,7 +27,9 @@
         "https://*.drillster.com/*"
       ],
       "js": [
-        "scripts/drillsterbot.js"
+        "script/content.js",
+        "script/storage.js",
+        "script/util.js"
       ],
       "all_frames": true
     }
@@ -35,16 +38,18 @@
     "https://*.drillster.com/*"
   ],
   "permissions": [
-    "scripting",
     "activeTab",
-    "webNavigation"
+    "webNavigation",
+    "contextMenus",
+    "cookies"
   ],
   "commands": {
-    "_execute_action": {
+    "start_stop": {
       "suggested_key": {
         "default": "Ctrl+Z",
         "mac": "Command+Z"
-      }
+      },
+      "description": "Start / Stop the bot"
     }
   }
 }
