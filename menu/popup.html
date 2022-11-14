@@ -5,7 +5,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<script src="../script/storage.js"></script>
 <script src="popup.js"></script>
 
 <h1>DrillsterBot</h1>
@@ -18,11 +17,11 @@
 </p>
 
 <p class="option">
-    <label for="answerTime"> Antwoord interval:</label><br>
-    <input type="number" id="answerTime" name="answerTime" min="100" max="5000" value="300">
+    <label for="answerTime"> Antwoord interval (ms):</label><br>
+    <input type="number" id="answerTime" name="answerTime" min="100" max="999" value="400" step="10">
 </p>
 
-<p id="instruction">Druk CTRL + Z om te starten / stoppen</p>
+<p id="instruction">Druk CTRL + Z om te starten / stoppen. Als DrillsterBot blijft hangen, verhoog dan het "Antwoord interval"!</p>
 
 <p id="credits">DrillsterBot, gemaakt door Tvhee#4828</p>
 

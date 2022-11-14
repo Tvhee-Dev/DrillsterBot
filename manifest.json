@@ -19,7 +19,7 @@
     }
   },
   "background": {
-    "service_worker": "background/background.js"
+    "service_worker": "script/background.js"
   },
   "content_scripts": [
     {
@@ -27,9 +27,7 @@
         "https://*.drillster.com/*"
       ],
       "js": [
-        "script/content.js",
-        "script/storage.js",
-        "script/util.js"
+        "script/content.js"
       ],
       "all_frames": true
     }
@@ -41,7 +39,8 @@
     "activeTab",
     "webNavigation",
     "contextMenus",
-    "cookies"
+    "cookies",
+    "notifications"
   ],
   "commands": {
     "start_stop": {

@@ -1,7 +1,7 @@
 async function start() {
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
 
-    chrome.tabs.sendMessage(tab.id, {storage: "Retrieve"}, function (response) {
+    chrome.tabs.sendMessage(tab.id, {storage: "GET"}, function (response) {
             if (chrome.runtime.lastError) {
                 document.getElementById("instruction").remove();
                 const element = document.getElementsByClassName("option");
@@ -49,9 +49,9 @@ async function setAnswerTime() {
     const answerTime = document.getElementById("answerTime");
     let value = answerTime.value;
 
-    if(value > 5000)
-        value = 5000;
-    else if(value < 100)
+    if (value > 999)
+        value = 999;
+    else if (value < 100)
         value = 100;
 
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});

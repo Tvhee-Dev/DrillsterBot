@@ -1,6 +1,9 @@
+//Storage
 let enableStorage = undefined;
 let answerTime = undefined;
 let wordlist = undefined;
+
+//Runtime
 let running = false;
 
 function load() {
@@ -16,11 +19,6 @@ function load() {
             return true;
         }
 
-        if(request.check_running !== undefined) {
-            sendResponse({is_running: running});
-            return true;
-        }
-
         if (request.set_answer_time !== undefined) {
             saveCookie("Answer_Delay", request.set_answer_time, 90);
             answerTime = request.set_answer_time;
@@ -29,6 +27,15 @@ function load() {
         if (request.set_storage_enabled !== undefined) {
             saveCookie("Storage_Enabled", request.set_storage_enabled, 90);
             enableStorage = request.set_storage_enabled;
+        }
+
+        if (request.progress !== undefined) {
+            if(running)
+                sendResponse({progress: getPercentage()});
+            else
+                sendResponse({progress: -1});
+
+            return true;
         }
 
         if (request.run_mode !== undefined) {
@@ -46,16 +53,13 @@ function load() {
 
     setTimeout(function () {
         enableStorage = getCookie("Storage_Enabled", "true") === "true";
-        answerTime = parseInt(getCookie("Answer_Delay", "300"));
+        answerTime = parseInt(getCookie("Answer_Delay", "500"));
         wordlist = getWordlist();
     }, 10);
 }
 
 function main() {
-    if (!running) {
-        return;
-    } else if (checkPercentage()) {
-        alert("DrillsterBot is klaar met deze Drill!");
+    if (!running || getPercentage() === 100) {
         return;
     }
 
@@ -74,8 +78,8 @@ function setAnswer() {
     let inputField = document.getElementsByClassName("dwc-text-field__input")[0];
     let submitButton = document.getElementsByClassName("drl-enlarged-button")[0];
 
-    if(column !== undefined)
-        question = column.innerText + "/" + question;
+    if (column !== undefined)
+        question = column.innerText + "\\" + question;
 
     if (wordlist[question] !== undefined) {
         pressSampleKey(inputField);
@@ -108,7 +112,7 @@ function setAnswer() {
 function retrieveAnswer() {
     let idkButton = document.getElementsByClassName("question-component__button question-component__button--dontknow")[0];
     let column = document.getElementsByClassName("question-component__tell__name")[0];
-    let columnName = column === undefined ? "" : column.innerText + "/";
+    let columnName = column === undefined ? "" : column.innerText + "\\";
 
     idkButton.click();
 
@@ -124,6 +128,79 @@ function retrieveAnswer() {
 
         setTimeout(main, answerTime);
     }, answerTime);
+}
+
+//Storage
+function saveCookie(name, text, days) {
+    let date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = "DrillsterBot_" + name + "=" + text + ";expires=" + date.toUTCString() + ";path=/"
+}
+
+function getCookie(name, defaultValue) {
+    let cookieName = "DrillsterBot_" + name + "=";
+    let decodedCookie = decodeURIComponent(document.cookie);
+    let ca = decodedCookie.split(';');
+    let result = "";
+
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+
+        while (c.charAt(0) === ' ') {
+            c = c.substring(1);
+        }
+
+        if (c.indexOf(cookieName) === 0) {
+            result = c.substring(cookieName.length, c.length);
+        }
+    }
+
+    if (result === "")
+        return defaultValue;
+
+    return result;
+}
+
+function getWordlist() {
+    const wordlist = {};
+    const result = getCookie("Wordlist", "");
+    let wordsSplit = result.split('|');
+
+    if (result.length === 0)
+        return wordlist;
+
+    for (let i = 0; i < wordsSplit.length; i++) {
+        let dictionaryValue = wordsSplit[i];
+        let question = dictionaryValue.split(':')[0];
+        wordlist[question] = dictionaryValue.split(':')[1];
+    }
+
+    return wordlist;
+}
+
+function saveWordlist() {
+    let text = "";
+
+    for (let [question, answer] of Object.entries(wordlist)) {
+        if (!(text === "")) {
+            text = text + "|";
+        }
+
+        text = text + question + ":" + answer;
+    }
+
+    saveCookie("Wordlist", text, 90);
+}
+
+//Util
+function pressSampleKey(inputField) {
+    inputField.dispatchEvent(new KeyboardEvent('keydown', {'key': 'a'}));
+    inputField.dispatchEvent(new KeyboardEvent('keyup', {'key': 'a'}));
+}
+
+function getPercentage() {
+    let percentage = document.getElementsByClassName("proficiency-meter__percentage")[0];
+    return percentage === undefined ? 100 : parseInt(percentage.innerText.replaceAll("%", ""));
 }
 
 load();
