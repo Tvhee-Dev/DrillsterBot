@@ -134,7 +134,7 @@ function retrieveAnswer() {
 function saveCookie(name, text, days) {
     let date = new Date();
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-    document.cookie = "DrillsterBot_" + name + "=" + text + ";expires=" + date.toUTCString() + ";path=/"
+    document.cookie = "DrillsterBot_" + name + "=" + encodeURIComponent(text) + ";expires=" + date.toUTCString() + ";path=/"
 }
 
 function getCookie(name, defaultValue) {
