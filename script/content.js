@@ -5,6 +5,7 @@ let wordlist = undefined;
 
 //Runtime
 let running = false;
+let columnAsked = false;
 
 function load() {
     try {
@@ -20,12 +21,12 @@ function load() {
         }
 
         if (request.set_answer_time !== undefined) {
-            saveCookie("Answer_Delay", request.set_answer_time, 90);
+            saveCookie("Answer_Delay", request.set_answer_time, 180);
             answerTime = request.set_answer_time;
         }
 
         if (request.set_storage_enabled !== undefined) {
-            saveCookie("Storage_Enabled", request.set_storage_enabled, 90);
+            saveCookie("Storage_Enabled", request.set_storage_enabled, 180);
             enableStorage = request.set_storage_enabled;
         }
 
@@ -78,8 +79,12 @@ function setAnswer() {
     let inputField = document.getElementsByClassName("dwc-text-field__input")[0];
     let submitButton = document.getElementsByClassName("drl-enlarged-button")[0];
 
-    if (column !== undefined)
-        question = column.innerText + "\\" + question;
+    if (column !== undefined) {
+        question = column.innerText.toLowerCase() + "\\" + question;
+
+        if(!columnAsked)
+            columnAsked = true;
+    }
 
     if (wordlist[question] !== undefined) {
         pressSampleKey(inputField);
@@ -111,16 +116,20 @@ function setAnswer() {
 
 function retrieveAnswer() {
     let idkButton = document.getElementsByClassName("question-component__button question-component__button--dontknow")[0];
-    let column = document.getElementsByClassName("question-component__tell__name")[0];
-    let columnName = column === undefined ? "" : column.innerText + "\\";
 
-    idkButton.click();
+    if(idkButton !== undefined)
+        idkButton.click();
 
     setTimeout(function () {
+        let column = document.getElementsByClassName("drl-introduction__tell__name")[0];
         let question = document.getElementsByClassName("dwc-markup-text")[0];
         let answer = document.getElementsByClassName("dwc-markup-text")[1];
 
-        wordlist[columnName + question.innerText] = answer.innerText;
+        if(columnAsked)
+            wordlist[column.innerText.toLowerCase() + "\\" + question.innerText] = answer.innerText;
+        else
+            wordlist[question.innerText] = answer.innerText;
+
         document.getElementsByClassName("dwc-button dwc-button--contained")[0].click();
 
         if (enableStorage)
@@ -133,7 +142,7 @@ function retrieveAnswer() {
 //Storage
 function saveCookie(name, text, days) {
     let date = new Date();
-    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    date.setTime(date.getTime() + (days * 24 * 3600 * 1000));
     document.cookie = "DrillsterBot_" + name + "=" + encodeURIComponent(text) + ";expires=" + date.toUTCString() + ";path=/"
 }
 
