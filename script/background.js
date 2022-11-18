@@ -4,6 +4,26 @@ chrome.runtime.onInstalled.addListener(async () => {
     });
 });
 
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    if (request.percentage !== undefined) {
+        chrome.notifications.create("drill_finished", {
+            type: "basic",
+            iconUrl: "../images/icon-128.png",
+            title: "DrillsterBot",
+            message: "DrillsterBot is klaar met deze Drill! Vragen: " + request.questions + ", Fouten: " + request.flaws
+        });
+
+        await chrome.action.setBadgeText({
+            tabId: request.tabId,
+            text: "DNE",
+        });
+
+        return true;
+    }
+
+    sendResponse();
+});
+
 chrome.commands.onCommand.addListener(async () => {
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
 
@@ -11,12 +31,12 @@ chrome.commands.onCommand.addListener(async () => {
         const prevState = await chrome.action.getBadgeText({tabId: tab.id});
         const nextState = prevState === "ON" ? "OFF" : "ON";
 
-        if(prevState === "DNE" || prevState === "RLD")
+        if (prevState === "DNE" || prevState === "RLD")
             return;
 
-        chrome.tabs.sendMessage(tab.id, {run_mode: nextState}, function () {
+        chrome.tabs.sendMessage(tab.id, {run_mode: nextState, tabId: tab.id}, async () => {
             if (chrome.runtime.lastError) {
-                chrome.action.setBadgeText({
+                await chrome.action.setBadgeText({
                     tabId: tab.id,
                     text: "RLD",
                 });
@@ -27,29 +47,5 @@ chrome.commands.onCommand.addListener(async () => {
             tabId: tab.id,
             text: nextState,
         });
-
-        if(nextState === "ON") {
-            let interval = setInterval(function () {
-                chrome.tabs.sendMessage(tab.id, {progress: "GET"}, function (response) {
-                    if (response.progress === 100) {
-                        chrome.notifications.create("drill_finished", {
-                            type: "basic",
-                            iconUrl: "../images/icon-128.png",
-                            title: "DrillsterBot",
-                            message: "DrillsterBot is klaar met deze Drill!"
-                        });
-
-                        chrome.action.setBadgeText({
-                            tabId: tab.id,
-                            text: "DNE",
-                        });
-                    }
-
-                    if(response.progress === -1 || response.progress === 100) {
-                        clearInterval(interval);
-                    }
-                });
-            }, 1000);
-        }
     }
 });

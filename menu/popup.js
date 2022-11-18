@@ -22,19 +22,22 @@ async function start() {
             }
 
             if (response.storage_enabled !== undefined) {
-                const wordlist = document.getElementById("saveWordlist");
-                wordlist.checked = response.storage_enabled;
+                document.getElementById("saveWordlist").checked = response.storage_enabled;
             }
 
             if (response.answer_time !== undefined) {
-                const answerTime = document.getElementById("answerTime");
-                answerTime.value = response.answer_time;
+                document.getElementById("answerTime").value = response.answer_time;
+            }
+
+            if (response.flaw_marge !== undefined) {
+                document.getElementById("flawMarge").value = response.flaw_marge;
             }
         }
     );
 
     document.getElementById("saveWordlist").addEventListener("click", () => setSaveWordlist());
     document.getElementById("answerTime").addEventListener("input", () => setAnswerTime());
+    document.getElementById("flawMarge").addEventListener("input", () => setFlawMarge());
 }
 
 async function setSaveWordlist() {
@@ -57,6 +60,21 @@ async function setAnswerTime() {
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
 
     chrome.tabs.sendMessage(tab.id, {set_answer_time: value}, function (response) {
+    });
+}
+
+async function setFlawMarge() {
+    const flawMarge = document.getElementById("flawMarge");
+    let value = flawMarge.value;
+
+    if (value > 99)
+        value = 25;
+    else if (value < 0)
+        value = 25;
+
+    let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
+
+    chrome.tabs.sendMessage(tab.id, {set_flaw_marge: value}, function (response) {
     });
 }
 
