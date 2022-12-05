@@ -20,17 +20,24 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
         return true;
     }
+    if (request.toggle !== undefined){
+        toggleonoff("OFF");
+        toggleonoff("ON");
+    }
 
     sendResponse();
 });
-
-chrome.commands.onCommand.addListener(async () => {
+async function toggleonoff(state){
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
 
     if (tab.url.startsWith("https://www.drillster.com/user")) {
         const prevState = await chrome.action.getBadgeText({tabId: tab.id});
-        const nextState = prevState === "ON" ? "OFF" : "ON";
-
+        let nextState = ''
+        if (state===undefined){
+            nextState = prevState === "ON" ? "OFF" : "ON";
+        } else{
+            nextState = state;
+        }
         if (prevState === "DNE" || prevState === "RLD")
             return;
 
@@ -48,4 +55,7 @@ chrome.commands.onCommand.addListener(async () => {
             text: nextState,
         });
     }
+}
+chrome.commands.onCommand.addListener(async () => {
+    toggleonoff();
 });

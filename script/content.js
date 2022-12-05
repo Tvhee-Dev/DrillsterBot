@@ -150,7 +150,14 @@ function retrieveAnswer() {
         let column = document.getElementsByClassName("drl-introduction__tell__name")[0];
         let question = document.getElementsByClassName("dwc-markup-text")[0];
         let answer = document.getElementsByClassName("dwc-markup-text")[1];
-
+        try{
+            const conditionsArray=[column.innerText,question.innerText,answer.innerText]
+        } catch(error){
+            console.log("Could not find element. Trying again in 50ms")
+            setTimeout(function(){chrome.runtime.sendMessage({toggle:1}).then();}, 50);
+        };
+        //if (conditionsArray.includes(undefined)===1)
+        
         if (columnAsked)
             wordlist[column.innerText.toLowerCase() + "\\" + question.innerText] = answer.innerText;
         else
@@ -165,19 +172,22 @@ function retrieveAnswer() {
     }, answerTime);
 }
 
+
 //Storage
 function saveCookie(name, text, days) {
-    let date = new Date();
-    date.setTime(date.getTime() + (days * 24 * 3600 * 1000));
-    document.cookie = "DrillsterBot_" + encodeURIComponent(name) + "=" + encodeURIComponent(text) + ";expires=" + date.toUTCString() + ";path=/";
+    //let date = new Date();
+    //date.setTime(date.getTime() + (days * 24 * 3600 * 1000));
+    localStorage.setItem("DrillsterBot_"+encodeURIComponent(name), encodeURIComponent(text));
+    //document.cookie = "DrillsterBot_" + encodeURIComponent(name) + "=" + encodeURIComponent(text) + ";expires=" + date.toUTCString() + ";path=/";
 }
 
 function getCookie(name, defaultValue) {
-    let cookieName = "DrillsterBot_" + name + "=";
-    let decodedCookie = decodeURIComponent(document.cookie);
-    let ca = decodedCookie.split(";");
+    let cookieName = "DrillsterBot_" + encodeURIComponent(name)/* + "="*/;
+    //let decodedCookie = decodeURIComponent(document.cookie);
+    //let ca = decodedCookie.split(";");
     let result = "";
-
+    result = localStorage.getItem(cookieName)
+/*
     for (let i = 0; i < ca.length; i++) {
         let c = ca[i];
 
@@ -189,11 +199,11 @@ function getCookie(name, defaultValue) {
             result = c.substring(cookieName.length, c.length);
         }
     }
-
-    if (result === "")
+*/
+    if (result === null)
         return defaultValue;
 
-    return result;
+    return decodeURIComponent(result);
 }
 
 function getWordlist(drillTitle) {
