@@ -21,21 +21,15 @@ async function start() {
                 return;
             }
 
-            if (response.storage_enabled !== undefined) {
-                document.getElementById("saveWordlist").checked = response.storage_enabled;
-            }
-
-            if (response.answer_time !== undefined) {
-                document.getElementById("answerTime").value = response.answer_time;
-            }
-
-            if (response.flaw_marge !== undefined) {
-                document.getElementById("flawMarge").value = response.flaw_marge;
-            }
+            document.getElementById("saveWordlist").checked = response.storage_enabled;
+            document.getElementById("answerTime").value = response.answer_time;
+            document.getElementById("flawMarge").value = response.flaw_marge;
+            document.getElementById("autoClose").checked = response.auto_close;
         }
     );
 
     document.getElementById("saveWordlist").addEventListener("click", () => setSaveWordlist());
+    document.getElementById("autoClose").addEventListener("click", () => setAutoClose());
     document.getElementById("answerTime").addEventListener("input", () => setAnswerTime());
     document.getElementById("flawMarge").addEventListener("input", () => setFlawMarge());
 }
@@ -43,9 +37,13 @@ async function start() {
 async function setSaveWordlist() {
     const wordlist = document.getElementById("saveWordlist");
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
+    await chrome.tabs.sendMessage(tab.id, {set_storage_enabled: wordlist.checked});
+}
 
-    chrome.tabs.sendMessage(tab.id, {set_storage_enabled: wordlist.checked}, function (response) {
-    });
+async function setAutoClose() {
+    const autoClose = document.getElementById("autoClose");
+    let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
+    await chrome.tabs.sendMessage(tab.id, {set_auto_close: autoClose.checked});
 }
 
 async function setAnswerTime() {
@@ -58,9 +56,7 @@ async function setAnswerTime() {
         value = 100;
 
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
-
-    chrome.tabs.sendMessage(tab.id, {set_answer_time: value}, function (response) {
-    });
+    await chrome.tabs.sendMessage(tab.id, {set_answer_time: value});
 }
 
 async function setFlawMarge() {
@@ -73,9 +69,7 @@ async function setFlawMarge() {
         value = 25;
 
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
-
-    chrome.tabs.sendMessage(tab.id, {set_flaw_marge: value}, function (response) {
-    });
+    await chrome.tabs.sendMessage(tab.id, {set_flaw_marge: value});
 }
 
 start();

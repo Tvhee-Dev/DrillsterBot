@@ -1,17 +1,17 @@
 //Storage
 let enableStorage = undefined;
+let autoClose = undefined;
 let answerTime = undefined;
 let flawMarge = undefined;
 let wordlist = undefined;
 
 //Runtime
-let running = false;
-let tabId;
+let currentDrill = undefined;
 let columnAsked = false;
 let mistakes = 0;
 let questionsTaken = 0;
 
-function load() {
+function start() {
     try {
         if (window.self === window.top)
             return;
@@ -20,37 +20,39 @@ function load() {
 
     chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         if (request.storage !== undefined) {
-            sendResponse({storage_enabled: enableStorage, answer_time: answerTime, flaw_marge: flawMarge});
+            sendResponse({storage_enabled: enableStorage, answer_time: answerTime, flaw_marge: flawMarge, auto_close: autoClose});
             return true;
         }
 
-        if (request.tabId !== undefined)
-            tabId = request.tabId;
-
         if (request.set_answer_time !== undefined) {
-            saveCookie("Answer_Delay", request.set_answer_time, 180);
+            saveCookie("Answer_Delay", request.set_answer_time);
             answerTime = request.set_answer_time;
         }
 
         if (request.set_storage_enabled !== undefined) {
-            saveCookie("Storage_Enabled", request.set_storage_enabled, 180);
+            saveCookie("Storage_Enabled", request.set_storage_enabled);
             enableStorage = request.set_storage_enabled;
         }
 
+        if (request.set_auto_close !== undefined) {
+            saveCookie("Auto_Close", request.set_auto_close);
+            autoClose = request.set_auto_close;
+        }
+
         if (request.set_flaw_marge !== undefined) {
-            saveCookie("Flaw_Marge", request.set_flaw_marge, 180);
+            saveCookie("Flaw_Marge", request.set_flaw_marge);
             flawMarge = request.set_flaw_marge;
         }
 
         if (request.run_mode !== undefined) {
             if (request.run_mode === "ON") {
-                running = true;
+                currentDrill = document.getElementsByClassName("playable-frame__header__title")[0].innerText;
                 main();
             } else if (request.run_mode === "OFF") {
-                running = false;
+                currentDrill = undefined;
             }
 
-            sendResponse({running: running});
+            sendResponse({running: currentDrill !== undefined});
         }
 
         sendResponse();
@@ -59,7 +61,8 @@ function load() {
 
     setTimeout(function () {
         enableStorage = getCookie("Storage_Enabled", "true") === "true";
-        answerTime = parseInt(getCookie("Answer_Delay", "450"));
+        autoClose = getCookie("Auto_Close", "true") === "true";
+        answerTime = parseInt(getCookie("Answer_Delay", "400"));
         flawMarge = parseInt(getCookie("Flaw_Marge", "0"));
 
         if (flawMarge > 99 || flawMarge < 0)
@@ -67,19 +70,21 @@ function load() {
 
         if (answerTime > 999 || answerTime < 100)
             answerTime = 500;
+
+        chrome.runtime.sendMessage({initialize: true}).then();
     }, 10);
 }
 
 function main() {
-    if (!running) {
+    if (currentDrill === undefined)
         return;
-    }
 
     if (wordlist === undefined)
-        wordlist = getWordlist(document.getElementsByClassName("playable-frame__header__title")[0].innerText);
+        wordlist = getWordlist(currentDrill);
 
     if (getPercentage() === 100) {
-        chrome.runtime.sendMessage({percentage: 100, questions: questionsTaken, flaws: mistakes, tabId: tabId}).then();
+        chrome.runtime.sendMessage({percentage: 100, questions: questionsTaken, flaws: mistakes, drill_title: currentDrill, auto_close: autoClose}).then();
+        currentDrill = undefined;
         return;
     }
 
@@ -93,24 +98,31 @@ function main() {
 }
 
 function setAnswer() {
-    let question = document.getElementsByClassName("question-component__ask__term")[0].innerText;
-    let column = document.getElementsByClassName("question-component__tell__name")[0];
+    let questionObject = document.getElementsByClassName("question-component__ask__term")[0];
+    let columnObject = document.getElementsByClassName("question-component__tell__name")[0];
     let inputField = document.getElementsByClassName("dwc-text-field__input")[0];
     let submitButton = document.getElementsByClassName("drl-enlarged-button")[0];
 
-    if (column !== undefined) {
-        question = column.innerText.toLowerCase() + "\\" + question;
+    let question = tryAction(() => {
+        if (columnObject !== undefined) {
+            if (!columnAsked)
+                columnAsked = true;
 
-        if (!columnAsked)
-            columnAsked = true;
-    }
+            return columnObject.innerText.toLowerCase() + "\\" + questionObject.innerText;
+        }
+
+        return questionObject.innerText;
+    });
+
+    if(question === undefined)
+        return;
 
     if (wordlist[question] !== undefined) {
         pressSampleKey(inputField);
         questionsTaken++;
 
         if ((mistakes / questionsTaken) < (flawMarge / 100)) {
-            inputField.value = "Flaw Marge"
+            inputField.value = "Flaw Marge";
             mistakes++;
         } else {
             inputField.value = wordlist[question];
@@ -126,7 +138,7 @@ function setAnswer() {
                     wordlist[question] = correctAnswer.innerText;
 
                     if (enableStorage)
-                        saveWordlist(document.getElementsByClassName("playable-frame__header__title")[0].innerText);
+                        saveWordlist(currentDrill);
 
                     document.getElementsByClassName("dwc-button dwc-button--contained")[0].click();
                     setTimeout(main, answerTime);
@@ -147,59 +159,40 @@ function retrieveAnswer() {
         idkButton.click();
 
     setTimeout(function () {
-        let column = document.getElementsByClassName("drl-introduction__tell__name")[0];
-        let question = document.getElementsByClassName("dwc-markup-text")[0];
-        let answer = document.getElementsByClassName("dwc-markup-text")[1];
-        try{
-            const conditionsArray=[column.innerText,question.innerText,answer.innerText]
-        } catch(error){
-            console.log("Could not find element. Trying again in 50ms")
-            setTimeout(function(){chrome.runtime.sendMessage({toggle:1}).then();}, 50);
-        };
-        //if (conditionsArray.includes(undefined)===1)
-        
-        if (columnAsked)
-            wordlist[column.innerText.toLowerCase() + "\\" + question.innerText] = answer.innerText;
+        let columnObject = document.getElementsByClassName("drl-introduction__tell__name")[0];
+        let questionObject = document.getElementsByClassName("dwc-markup-text")[0];
+        let answerObject = document.getElementsByClassName("dwc-markup-text")[1];
+
+        let column = tryAction(() => {return columnObject === undefined ? undefined : columnObject.innerText});
+        let question = tryAction(() => {return questionObject.innerText});
+        let answer = tryAction(() => {return answerObject.innerText});
+
+        if(question === undefined || answer === undefined)
+            return;
+
+        if (columnAsked && columnObject !== undefined)
+            wordlist[column.toLowerCase() + "\\" + question] = answer;
         else
-            wordlist[question.innerText] = answer.innerText;
+            wordlist[question] = answer;
 
         document.getElementsByClassName("dwc-button dwc-button--contained")[0].click();
 
         if (enableStorage)
-            saveWordlist(document.getElementsByClassName("playable-frame__header__title")[0].innerText);
+            saveWordlist(currentDrill);
 
         setTimeout(main, answerTime);
     }, answerTime);
 }
 
-
 //Storage
-function saveCookie(name, text, days) {
-    //let date = new Date();
-    //date.setTime(date.getTime() + (days * 24 * 3600 * 1000));
-    localStorage.setItem("DrillsterBot_"+encodeURIComponent(name), encodeURIComponent(text));
-    //document.cookie = "DrillsterBot_" + encodeURIComponent(name) + "=" + encodeURIComponent(text) + ";expires=" + date.toUTCString() + ";path=/";
+function saveCookie(name, text) {
+    localStorage.setItem("DrillsterBot_" + encodeURIComponent(name), encodeURIComponent(text));
 }
 
 function getCookie(name, defaultValue) {
-    let cookieName = "DrillsterBot_" + encodeURIComponent(name)/* + "="*/;
-    //let decodedCookie = decodeURIComponent(document.cookie);
-    //let ca = decodedCookie.split(";");
-    let result = "";
-    result = localStorage.getItem(cookieName)
-/*
-    for (let i = 0; i < ca.length; i++) {
-        let c = ca[i];
+    let cookieName = "DrillsterBot_" + encodeURIComponent(name);
+    let result = localStorage.getItem(cookieName);
 
-        while (c.charAt(0) === " ") {
-            c = c.substring(1);
-        }
-
-        if (c.indexOf(cookieName) === 0) {
-            result = c.substring(cookieName.length, c.length);
-        }
-    }
-*/
     if (result === null)
         return defaultValue;
 
@@ -213,17 +206,7 @@ function getWordlist(drillTitle) {
     let cookieText;
 
     while ((cookieText = getCookie("Wordlist_" + title + "_" + cookieIndex, "")) !== "") {
-        /*const header = cookieText.toString().includes("<>") ? cookieText.toString().split("<>")[0] : "";
-        const words = cookieText.toString().includes("<>") ? cookieText.toString().split("<>")[1] : cookieText;
-
-        for (let repetitiveValue in header.split("|")) {
-            let key = repetitiveValue.split("=")[1];
-            let value = repetitiveValue.split("=")[0];
-
-            words.replaceAll(key, value);
-        }*/
-
-        const wordsSplit = cookieText.split("|");//words.split("|");
+        const wordsSplit = cookieText.split("|");
 
         for (let i = 0; i < wordsSplit.length; i++) {
             let dictionaryValue = wordsSplit[i];
@@ -238,26 +221,11 @@ function getWordlist(drillTitle) {
 }
 
 function saveWordlist(drillTitle) {
-    //let headerCount = 1;
     const header = {};
     let text = "";
 
     for (let [question, answer] of Object.entries(wordlist)) {
         let currentQuestion = question + "=" + answer;
-
-        /*if(currentQuestion.includes("\\")) {
-            let keyToReplace = currentQuestion.split("\\")[0];
-            let headerNumber = header[keyToReplace];
-
-            if(headerNumber === undefined) {
-                headerNumber = "^" + headerCount;
-                header[keyToReplace] = headerNumber;
-                headerCount++;
-            }
-
-            currentQuestion = currentQuestion.replace(keyToReplace + "\\", headerNumber + "\\");
-        }*/
-
         text = text + (text.length === 0 ? "" : "|") + currentQuestion;
     }
 
@@ -277,11 +245,20 @@ function saveWordlist(drillTitle) {
     let cookieSplit = completedText.match(/.{1,3800}/g);
 
     for (let i = 0; i < cookieSplit.length; i++) {
-        saveCookie("Wordlist_" + drillTitle.replaceAll(" ", "_") + "_" + (i + 1), cookieSplit[i], 180);
+        saveCookie("Wordlist_" + drillTitle.replaceAll(" ", "_") + "_" + (i + 1), cookieSplit[i]);
     }
 }
 
 //Util
+function tryAction(action) {
+    try {
+        return action();
+    } catch (error) {
+        console.log("Could not find element. Retrying in 50ms");
+        setTimeout(chrome.runtime.sendMessage({retry: true}), 50);
+    }
+}
+
 function pressSampleKey(inputField) {
     inputField.dispatchEvent(new KeyboardEvent("keydown", {"key": "a"}));
     inputField.dispatchEvent(new KeyboardEvent("keyup", {"key": "a"}));
@@ -292,4 +269,4 @@ function getPercentage() {
     return percentage === undefined ? 100 : parseInt(percentage.innerText.replaceAll("%", ""));
 }
 
-load();
+start();

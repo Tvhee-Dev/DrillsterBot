@@ -1,36 +1,41 @@
 <!DOCTYPE html>
 <html lang="nl">
-    <head>
-        <title>DrillsterBot</title>
-        <link rel="stylesheet" href="style.css">
-    </head>
-    <body>
-        <script src="popup.js"></script>
+<head>
+    <title>DrillsterBot</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<script src="popup.js"></script>
 
-        <h1>DrillsterBot</h1>
+<h1>DrillsterBot</h1>
 
-        <img src='../images/icon-popup.png' id='drillsterImage' alt="Drillster Image">
+<img src='../images/icon-popup.png' id='drillsterImage' alt="Drillster Image">
 
-        <p class="option">
-            <label for="saveWordlist"> Woordenlijst opslaan:</label><br>
-            <input type="checkbox" id="saveWordlist" name="saveWordlist" value="saveWorldlist">
-        </p>
+<p class="option">
+    <label for="saveWordlist"> Woordenlijst opslaan:</label><br>
+    <input type="checkbox" id="saveWordlist" name="saveWordlist" value="saveWorldlist">
+</p>
 
-        <p class="option">
-            <label for="flawMarge"> Foutmarge (%):</label><br>
-            <input type="number" id="flawMarge" name="flawMarge" min="0" max="99" value="0" step="5">
-        </p>
+<p class="option">
+    <label for="autoClose"> Automatisch afsluiten:</label><br>
+    <input type="checkbox" id="autoClose" name="autoClose" value="autoClose">
+</p>
 
-        <p class="option">
-            <label for="answerTime"> Antwoord interval (ms):</label><br>
-            <input type="number" id="answerTime" name="answerTime" min="100" max="999" value="450" step="50">
-        </p>
+<p class="option">
+    <label for="flawMarge"> Foutmarge (%):</label><br>
+    <input type="number" id="flawMarge" name="flawMarge" min="0" max="99" value="0" step="5">
+</p>
 
-        <p id="instruction">Druk CTRL + Z om te starten / stoppen. Als DrillsterBot blijft hangen, verhoog dan het "Antwoord
-            interval"!</p>
+<p class="option">
+    <label for="answerTime"> Antwoord interval (ms):</label><br>
+    <input type="number" id="answerTime" name="answerTime" min="100" max="999" value="400" step="50">
+</p>
 
-        <p id="credits"><a href="https://github.com/Tvhee-Dev/DrillsterBot" target="_blank">DrillsterBot, gemaakt door
-            Tvhee#4828</a></p>
-            
-    </body>
+<p id="instruction">Druk CTRL + Z om te starten / stoppen. Als DrillsterBot blijft hangen, verhoog dan het "Antwoord
+    interval"!</p>
+
+<p id="credits"><a href="https://github.com/Tvhee-Dev/DrillsterBot" target="_blank">DrillsterBot, gemaakt door
+    Tvhee#4828</a></p>
+
+</body>
 </html>
