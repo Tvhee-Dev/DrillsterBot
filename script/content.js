@@ -6,6 +6,7 @@ let flawMarge = undefined;
 let wordlist = undefined;
 
 //Runtime
+let lastQuestionTime = new Date().getTime();
 let currentDrill = undefined;
 let columnAsked = false;
 let mistakes = 0;
@@ -20,7 +21,12 @@ function start() {
 
     chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         if (request.storage !== undefined) {
-            sendResponse({storage_enabled: enableStorage, answer_time: answerTime, flaw_marge: flawMarge, auto_close: autoClose});
+            sendResponse({
+                storage_enabled: enableStorage,
+                answer_time: answerTime,
+                flaw_marge: flawMarge,
+                auto_close: autoClose
+            });
             return true;
         }
 
@@ -79,11 +85,21 @@ function main() {
     if (currentDrill === undefined)
         return;
 
+    const now = new Date().getTime();
+    console.log("Question Delay: " + (now - lastQuestionTime) + " ms");
+    lastQuestionTime = now;
+
     if (wordlist === undefined)
         wordlist = getWordlist(currentDrill);
 
     if (getPercentage() === 100) {
-        chrome.runtime.sendMessage({percentage: 100, questions: questionsTaken, flaws: mistakes, drill_title: currentDrill, auto_close: autoClose}).then();
+        chrome.runtime.sendMessage({
+            percentage: 100,
+            questions: questionsTaken,
+            flaws: mistakes,
+            drill_title: currentDrill,
+            auto_close: autoClose
+        }).then();
         currentDrill = undefined;
         return;
     }
@@ -114,18 +130,25 @@ function setAnswer() {
         return questionObject.innerText;
     });
 
-    if(question === undefined)
+    if (question === undefined)
         return;
 
     if (wordlist[question] !== undefined) {
         pressSampleKey(inputField);
         questionsTaken++;
 
-        if ((mistakes / questionsTaken) < (flawMarge / 100)) {
-            inputField.value = "Flaw Marge";
-            mistakes++;
-        } else {
-            inputField.value = wordlist[question];
+        try {
+            if ((mistakes / questionsTaken) < (flawMarge / 100)) {
+                inputField.value = "Flaw Marge";
+                mistakes++;
+            } else {
+                inputField.value = wordlist[question];
+            }
+        }
+        catch (error) {
+            console.log("Could not find element. Retrying in 50ms");
+            setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
+            return;
         }
 
         setTimeout(function () {
@@ -155,19 +178,32 @@ function setAnswer() {
 function retrieveAnswer() {
     let idkButton = document.getElementsByClassName("question-component__button question-component__button--dontknow")[0];
 
-    if (idkButton !== undefined)
-        idkButton.click();
+    if (idkButton !== undefined) {
+        try {
+            idkButton.click();
+        } catch (error) {
+            console.log("Could not find element. Retrying in 50ms");
+            setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
+            return;
+        }
+    }
 
     setTimeout(function () {
         let columnObject = document.getElementsByClassName("drl-introduction__tell__name")[0];
         let questionObject = document.getElementsByClassName("dwc-markup-text")[0];
         let answerObject = document.getElementsByClassName("dwc-markup-text")[1];
 
-        let column = tryAction(() => {return columnObject === undefined ? undefined : columnObject.innerText});
-        let question = tryAction(() => {return questionObject.innerText});
-        let answer = tryAction(() => {return answerObject.innerText});
+        let column = tryAction(() => {
+            return columnObject === undefined ? undefined : columnObject.innerText
+        });
+        let question = tryAction(() => {
+            return questionObject.innerText
+        });
+        let answer = tryAction(() => {
+            return answerObject.innerText
+        });
 
-        if(question === undefined || answer === undefined)
+        if (question === undefined || answer === undefined)
             return;
 
         if (columnAsked && columnObject !== undefined)
@@ -175,12 +211,16 @@ function retrieveAnswer() {
         else
             wordlist[question] = answer;
 
-        document.getElementsByClassName("dwc-button dwc-button--contained")[0].click();
-
         if (enableStorage)
             saveWordlist(currentDrill);
 
-        setTimeout(main, answerTime);
+        try {
+            document.getElementsByClassName("dwc-button dwc-button--contained")[0].click();
+            setTimeout(main, answerTime);
+        } catch (error) {
+            console.log("Could not find element. Retrying in 50ms");
+            setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
+        }
     }, answerTime);
 }
 
@@ -255,13 +295,19 @@ function tryAction(action) {
         return action();
     } catch (error) {
         console.log("Could not find element. Retrying in 50ms");
-        setTimeout(chrome.runtime.sendMessage({retry: true}), 50);
+        setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
     }
 }
 
 function pressSampleKey(inputField) {
-    inputField.dispatchEvent(new KeyboardEvent("keydown", {"key": "a"}));
-    inputField.dispatchEvent(new KeyboardEvent("keyup", {"key": "a"}));
+    try {
+        inputField.dispatchEvent(new KeyboardEvent("keydown", {"key": "a"}));
+        inputField.dispatchEvent(new KeyboardEvent("keyup", {"key": "a"}));
+    }
+    catch (error) {
+        console.log("Could not find element. Retrying in 50ms");
+        setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
+    }
 }
 
 function getPercentage() {
