@@ -311,7 +311,7 @@ function pressSampleKey(inputField) {
 }
 
 function getPercentage() {
-    let percentage = document.getElementsByClassName("proficiency-meter__percentage")[0];
+    let percentage = document.getElementsByClassName("dwc-proficiency-meter__percentage")[0];
     return percentage === undefined ? 100 : parseInt(percentage.innerText.replaceAll("%", ""));
 }
 
