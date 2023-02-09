@@ -7,10 +7,12 @@ function start() {
         });
     });
 
-    chrome.commands.onCommand.addListener(async () => {
-        let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
+    chrome.commands.onCommand.addListener(async (command, tab) => {
+        if (!tab.url.startsWith("https://www.drillster.com/user")) {
+            return;
+        }
 
-        if (tab.url.startsWith("https://www.drillster.com/user")) {
+        if (command === "start_stop") {
             const prevState = await chrome.action.getBadgeText({tabId: tab.id});
             const nextState = prevState === "ON" ? "OFF" : "ON";
 
@@ -18,6 +20,10 @@ function start() {
                 return;
 
             await sendState(nextState);
+        } else if (command === "wordlist") {
+            await chrome.tabs.sendMessage(tab.id, {show_wordlist: true}, async () => {
+                if (chrome.runtime.lastError) {} //Preventing "Receiving end does not exist!"
+            });
         }
     });
 
@@ -31,16 +37,15 @@ function start() {
                 buttons: [{title: "Close"}]
             }
 
-            if(!request.auto_close) {
+            if (!request.auto_close) {
                 notification.buttons = [{title: "Close Tab"}, {title: "Browse Tab"}];
                 await setBadgeText("DNE", sender.tab.id);
-            }
-            else {
+            } else {
                 await chrome.tabs.remove(sender.tab.id);
             }
 
             chrome.notifications.create("drill_finished", notification, function (notificationId) {
-                if(!request.auto_close)
+                if (!request.auto_close)
                     sentNotifications[notificationId] = sender.tab.id;
             });
         } else if (request.retry !== undefined) {
@@ -54,7 +59,7 @@ function start() {
     });
 
     chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
-        if(notificationId in sentNotifications) {
+        if (notificationId in sentNotifications) {
             let tab = await chrome.tabs.get(sentNotifications[notificationId]);
 
             chrome.notifications.clear(notificationId);

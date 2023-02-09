@@ -19,7 +19,7 @@ function start() {
     } catch (e) {
     }
 
-    chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+    chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         if (request.storage !== undefined) {
             sendResponse({
                 storage_enabled: enableStorage,
@@ -52,13 +52,50 @@ function start() {
 
         if (request.run_mode !== undefined) {
             if (request.run_mode === "ON") {
-                currentDrill = document.getElementsByClassName("playable-frame__header__title")[0].innerText;
+                prepareForDrill();
                 main();
             } else if (request.run_mode === "OFF") {
                 currentDrill = undefined;
             }
 
             sendResponse({running: currentDrill !== undefined});
+        }
+
+        if (request.show_wordlist !== undefined) {
+            prepareForDrill();
+            let words = "";
+            let byCategory = {};
+
+            for (let [question, answer] of Object.entries(wordlist)) {
+                let categorySplit = question.split("\\");
+                let category = categorySplit.length > 1 ? categorySplit[0] : "Default";
+                let word = categorySplit[categorySplit.length > 1 ? 1 : 0];
+                let wordsOfCategory = byCategory[category];
+
+                if (wordsOfCategory === undefined)
+                    wordsOfCategory = [];
+
+                wordsOfCategory[wordsOfCategory.length] = word + " = " + answer;
+                byCategory[category] = wordsOfCategory;
+            }
+
+            let categories = Object.keys(byCategory);
+            categories.sort();
+
+            for (let i = 0; i < categories.length; i++) {
+                let category = categories[i];
+                let wordlist = byCategory[category];
+
+                wordlist.sort();
+                words = (words.length > 0 ? words + "\n" : words) + "Categorie: " + category + "\n";
+
+                for (let j = 0; j < wordlist.length; j++) {
+                    words = words + wordlist[j] + "\n";
+                }
+            }
+
+            await navigator.clipboard.writeText(words);
+            alert("Woordenlijst van " + currentDrill + " is gekopieerd naar het klembord!");
         }
 
         sendResponse();
@@ -88,9 +125,6 @@ function main() {
     const now = new Date().getTime();
     console.log("Question Delay: " + (now - lastQuestionTime) + " ms");
     lastQuestionTime = now;
-
-    if (wordlist === undefined)
-        wordlist = getWordlist(currentDrill);
 
     if (getPercentage() === 100) {
         chrome.runtime.sendMessage({
@@ -144,8 +178,7 @@ function setAnswer() {
             } else {
                 inputField.value = wordlist[question];
             }
-        }
-        catch (error) {
+        } catch (error) {
             console.log("Could not find element. Retrying in 50ms");
             setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
             return;
@@ -269,7 +302,7 @@ function saveWordlist(drillTitle) {
         text = text + (text.length === 0 ? "" : "|") + currentQuestion;
     }
 
-    let headerString = ""
+    let headerString = "";
 
     for (let [key, number] of Object.entries(header)) {
         if (headerString.length === 0)
@@ -285,8 +318,18 @@ function saveWordlist(drillTitle) {
     let cookieSplit = completedText.match(/.{1,3800}/g);
 
     for (let i = 0; i < cookieSplit.length; i++) {
-        saveCookie("Wordlist_" + drillTitle.replaceAll(" ", "_") + "_" + (i + 1), cookieSplit[i]);
+        saveCookie("Wordlist_" + drillTitle.replace(" ", "_") + "_" + (i + 1), cookieSplit[i]);
     }
+}
+
+function prepareForDrill() {
+    let title = document.getElementsByClassName("playable-frame__header__title")[0];
+
+    if (title === undefined)
+        return;
+
+    currentDrill = title.innerText;
+    wordlist = getWordlist(currentDrill);
 }
 
 //Util
@@ -303,8 +346,7 @@ function pressSampleKey(inputField) {
     try {
         inputField.dispatchEvent(new KeyboardEvent("keydown", {"key": "a"}));
         inputField.dispatchEvent(new KeyboardEvent("keyup", {"key": "a"}));
-    }
-    catch (error) {
+    } catch (error) {
         console.log("Could not find element. Retrying in 50ms");
         setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
     }
