@@ -75,7 +75,7 @@ function start() {
                 if (wordsOfCategory === undefined)
                     wordsOfCategory = [];
 
-                wordsOfCategory[wordsOfCategory.length] = word + " = " + answer;
+                wordsOfCategory[wordsOfCategory.length] = word + " = " + answer.replaceAll("+", " + ");
                 byCategory[category] = wordsOfCategory;
             }
 
@@ -105,7 +105,7 @@ function start() {
     setTimeout(function () {
         enableStorage = getCookie("Storage_Enabled", "true") === "true";
         autoClose = getCookie("Auto_Close", "true") === "true";
-        answerTime = parseInt(getCookie("Answer_Delay", "400"));
+        answerTime = parseInt(getCookie("Answer_Delay", "100"));
         flawMarge = parseInt(getCookie("Flaw_Marge", "0"));
 
         if (flawMarge > 99 || flawMarge < 0)
@@ -150,8 +150,6 @@ function main() {
 function setAnswer() {
     let questionObject = document.getElementsByClassName("question-component__ask__term")[0];
     let columnObject = document.getElementsByClassName("question-component__tell__name")[0];
-    let inputField = document.getElementsByClassName("dwc-text-field__input")[0];
-    let submitButton = document.getElementsByClassName("drl-enlarged-button")[0];
 
     let question = tryAction(() => {
         if (columnObject !== undefined) {
@@ -168,43 +166,102 @@ function setAnswer() {
         return;
 
     if (wordlist[question] !== undefined) {
-        pressSampleKey(inputField);
+        let answerToSet = wordlist[question];
         questionsTaken++;
 
-        try {
-            if ((mistakes / questionsTaken) < (flawMarge / 100)) {
-                inputField.value = "Flaw Marge";
-                mistakes++;
-            } else {
-                inputField.value = wordlist[question];
-            }
-        } catch (error) {
-            console.log("Could not find element. Retrying in 50ms");
-            setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
+        if ((mistakes / questionsTaken) < (flawMarge / 100)) {
+            answerToSet = "Foutmarge";
+            mistakes++;
+        }
+
+        let open = document.getElementsByClassName("multiple-choice-input__frame")[0] === undefined;
+
+        if(!(open ? setOpenAnswer(answerToSet) : setMultipleChoiceAnswer(answerToSet))) {
             return;
         }
 
         setTimeout(function () {
-            submitButton.click();
+            let correctAnswers = document.getElementsByClassName("drl-term drl-term--disabled");
 
-            setTimeout(function () {
-                let correctAnswer = document.getElementsByClassName("drl-term drl-term--open-ended")[0];
+            if(correctAnswers.length > 0) {
+                let correctAnswerList = "";
 
-                if ((wordlist[question] === undefined) || (correctAnswer !== undefined)) {
-                    wordlist[question] = correctAnswer.innerText;
+                for (let i = 0; i < correctAnswers.length; i++) {
+                    let correctAnswer = correctAnswers[i];
 
-                    if (enableStorage)
-                        saveWordlist(currentDrill);
+                    if(correctAnswer.className !== "drl-term drl-term--disabled")
+                        continue;
 
-                    document.getElementsByClassName("dwc-button dwc-button--contained")[0].click();
-                    setTimeout(main, answerTime);
-                } else {
-                    main();
+                    let answer = correctAnswer.innerText;
+                    correctAnswerList = correctAnswerList + (correctAnswerList.length > 0 ? "+" : "") + answer;
                 }
-            }, answerTime);
-        }, 1);
+
+                wordlist[question] = correctAnswerList;
+
+                if (enableStorage)
+                    saveWordlist(currentDrill);
+
+                document.getElementsByClassName("dwc-button dwc-button--contained")[0].click();
+                setTimeout(main, answerTime);
+            } else {
+                main();
+            }
+        }, answerTime);
     } else {
         retrieveAnswer();
+    }
+}
+
+function setOpenAnswer(value) {
+    try {
+        let inputField = document.getElementsByClassName("dwc-text-field__input")[0];
+        let submitButton = document.getElementsByClassName("drl-enlarged-button")[0];
+
+        pressSampleKey(inputField);
+        inputField.value = value === undefined ? "a" : value;
+        submitButton.click();
+        return true;
+    } catch (error) {
+        setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
+        return false;
+    }
+}
+
+function setMultipleChoiceAnswer(value) {
+    let values = (value === undefined ? "" : value).split("+");
+
+    try {
+        let multipleChoiceTable = document.getElementsByClassName("dwc-markup-text");
+        let answerButtonSelectionChoice = document.getElementsByClassName("drl-enlarged-button")[0];
+        let answerButtonPresent = answerButtonSelectionChoice !== undefined;
+        let foundAnyAnswer = false;
+
+        for(let i = 1 /*1, because it contains the question*/; i < multipleChoiceTable.length; i++) {
+            let answerButton = multipleChoiceTable[i];
+
+            for (let j = 0; j < values.length; j++) {
+                if((value === "Foutmarge" && answerButton.innerText !== values[j]) ||
+                    (value !== "Foutmarge" && answerButton.innerText === values[j])) {
+                    answerButton.click();
+                    foundAnyAnswer = true;
+                }
+            }
+        }
+
+        if(!foundAnyAnswer) {
+            retrieveAnswer();
+            return false;
+        }
+
+        setTimeout(function () {
+            if(answerButtonPresent)
+                answerButtonSelectionChoice.click();
+        }, 1);
+
+        return true;
+    } catch (error) {
+        setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
+        return false;
     }
 }
 
@@ -223,17 +280,24 @@ function retrieveAnswer() {
 
     setTimeout(function () {
         let columnObject = document.getElementsByClassName("drl-introduction__tell__name")[0];
-        let questionObject = document.getElementsByClassName("dwc-markup-text")[0];
-        let answerObject = document.getElementsByClassName("dwc-markup-text")[1];
+        let answerObjects = document.getElementsByClassName("dwc-markup-text");
 
         let column = tryAction(() => {
             return columnObject === undefined ? undefined : columnObject.innerText
         });
+
         let question = tryAction(() => {
-            return questionObject.innerText
+            return answerObjects[0].innerText
         });
+
         let answer = tryAction(() => {
-            return answerObject.innerText
+            let answers = "";
+
+            for (let i = 1 /*1, because it contains the question*/; i < answerObjects.length; i++) {
+                answers = answers + (answers.length > 0 ? "+" : "") + answerObjects[i].innerText;
+            }
+
+            return answers;
         });
 
         if (question === undefined || answer === undefined)
@@ -318,7 +382,7 @@ function saveWordlist(drillTitle) {
     let cookieSplit = completedText.match(/.{1,3800}/g);
 
     for (let i = 0; i < cookieSplit.length; i++) {
-        saveCookie("Wordlist_" + drillTitle.replace(" ", "_") + "_" + (i + 1), cookieSplit[i]);
+        saveCookie("Wordlist_" + drillTitle.replaceAll(" ", "_") + "_" + (i + 1), cookieSplit[i]);
     }
 }
 
