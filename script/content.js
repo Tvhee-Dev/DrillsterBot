@@ -6,11 +6,15 @@ let flawMarge = undefined;
 let wordlist = undefined;
 
 //Runtime
-let lastQuestionTime = new Date().getTime();
+let frameRefreshLoopId = undefined;
 let currentDrill = undefined;
 let columnAsked = false;
 let mistakes = 0;
 let questionsTaken = 0;
+
+//Timing
+let startPercentage = -1;
+let startPercentageTime = -1;
 
 function start() {
     try {
@@ -21,82 +25,34 @@ function start() {
 
     chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         if (request.storage !== undefined) {
-            sendResponse({
-                storage_enabled: enableStorage,
-                answer_time: answerTime,
-                flaw_marge: flawMarge,
-                auto_close: autoClose
-            });
+            sendResponse({storage_enabled: enableStorage, answer_time: answerTime,
+                flaw_marge: flawMarge, auto_close: autoClose});
             return true;
         }
 
-        if (request.set_answer_time !== undefined) {
-            saveCookie("Answer_Delay", request.set_answer_time);
-            answerTime = request.set_answer_time;
-        }
+        if (request.set_answer_time !== undefined)
+            saveCookie("Answer_Delay", (answerTime = request.set_answer_time));
 
-        if (request.set_storage_enabled !== undefined) {
-            saveCookie("Storage_Enabled", request.set_storage_enabled);
-            enableStorage = request.set_storage_enabled;
-        }
+        if (request.set_storage_enabled !== undefined)
+            saveCookie("Storage_Enabled", (enableStorage = request.set_storage_enabled));
 
-        if (request.set_auto_close !== undefined) {
-            saveCookie("Auto_Close", request.set_auto_close);
-            autoClose = request.set_auto_close;
-        }
+        if (request.set_auto_close !== undefined)
+            saveCookie("Auto_Close", (autoClose = request.set_auto_close));
 
-        if (request.set_flaw_marge !== undefined) {
-            saveCookie("Flaw_Marge", request.set_flaw_marge);
-            flawMarge = request.set_flaw_marge;
-        }
+        if (request.set_flaw_marge !== undefined)
+            saveCookie("Flaw_Marge", (flawMarge = request.set_flaw_marge));
 
         if (request.run_mode !== undefined) {
-            if (request.run_mode === "ON") {
-                prepareForDrill();
-                main();
-            } else if (request.run_mode === "OFF") {
-                currentDrill = undefined;
-            }
+            if (request.run_mode === "ON")
+                startPlaying();
+            else if (request.run_mode === "OFF")
+                stopPlaying();
 
             sendResponse({running: currentDrill !== undefined});
         }
 
-        if (request.show_wordlist !== undefined) {
-            prepareForDrill();
-            let words = "";
-            let byCategory = {};
-
-            for (let [question, answer] of Object.entries(wordlist)) {
-                let categorySplit = question.split("\\");
-                let category = categorySplit.length > 1 ? categorySplit[0] : "Default";
-                let word = categorySplit[categorySplit.length > 1 ? 1 : 0];
-                let wordsOfCategory = byCategory[category];
-
-                if (wordsOfCategory === undefined)
-                    wordsOfCategory = [];
-
-                wordsOfCategory[wordsOfCategory.length] = word + " = " + answer.replaceAll("+", " + ");
-                byCategory[category] = wordsOfCategory;
-            }
-
-            let categories = Object.keys(byCategory);
-            categories.sort();
-
-            for (let i = 0; i < categories.length; i++) {
-                let category = categories[i];
-                let wordlist = byCategory[category];
-
-                wordlist.sort();
-                words = (words.length > 0 ? words + "\n" : words) + "Categorie: " + category + "\n";
-
-                for (let j = 0; j < wordlist.length; j++) {
-                    words = words + wordlist[j] + "\n";
-                }
-            }
-
-            await navigator.clipboard.writeText(words);
-            alert("Woordenlijst van " + currentDrill + " is gekopieerd naar het klembord!");
-        }
+        if (request.show_wordlist !== undefined)
+            wordlistToMessage();
 
         sendResponse();
         return true;
@@ -105,65 +61,110 @@ function start() {
     setTimeout(function () {
         enableStorage = getCookie("Storage_Enabled", "true") === "true";
         autoClose = getCookie("Auto_Close", "true") === "true";
-        answerTime = parseInt(getCookie("Answer_Delay", "100"));
+        answerTime = parseInt(getCookie("Answer_Delay", "1"));
         flawMarge = parseInt(getCookie("Flaw_Marge", "0"));
 
         if (flawMarge > 99 || flawMarge < 0)
-            flawMarge = 25;
+            flawMarge = 0;
 
-        if (answerTime > 999 || answerTime < 100)
-            answerTime = 500;
+        if (answerTime > 999 || answerTime < 1)
+            answerTime = 1;
 
         chrome.runtime.sendMessage({initialize: true}).then();
-    }, 10);
+    }, 1);
+
+    let titleLoader = setInterval(() => {
+        let drillTitle = document.getElementsByClassName("details-page__cover__title")[0];
+
+        if (drillTitle !== undefined) {
+            currentDrill = drillTitle.innerText;
+            wordlist = getWordlist(currentDrill);
+            clearInterval(titleLoader);
+        }
+    }, 50);
 }
 
-function main() {
-    if (currentDrill === undefined)
-        return;
+function startPlaying() {
+    frameRefreshLoopId = setInterval(() => {
+        const now = new Date().getTime();
+        let percentageElement = document.getElementsByClassName("dwc-proficiency-meter__percentage")[0];
+        let percentage = 100;
 
-    const now = new Date().getTime();
-    console.log("Question Delay: " + (now - lastQuestionTime) + " ms");
-    lastQuestionTime = now;
+        if(percentageElement !== undefined)
+            percentage = parseInt(percentageElement.innerText.replaceAll("%", ""));
 
-    if (getPercentage() === 100) {
-        chrome.runtime.sendMessage({
-            percentage: 100,
-            questions: questionsTaken,
-            flaws: mistakes,
-            drill_title: currentDrill,
-            auto_close: autoClose
-        }).then();
-        currentDrill = undefined;
-        return;
-    }
+        if (percentage === 100 || currentDrill === undefined) {
+            chrome.runtime.sendMessage({percentage: 100, questions: questionsTaken, flaws: mistakes,
+                drill_title: currentDrill, auto_close: autoClose}).then();
 
-    let flipText = document.getElementsByClassName("drl-introduction__helper-text")[0];
+            stopPlaying();
+            return;
+        }
 
-    if (flipText !== undefined) {
-        retrieveAnswer();
-    } else {
-        setAnswer();
-    }
+        if (document.getElementsByClassName("loadindicator").length === 0) {
+            if(startPercentage < 0 || startPercentageTime < 0) {
+                startPercentage = percentage;
+                startPercentageTime = now;
+            }
+
+            let dPercentage = percentage - startPercentage;
+
+            if(dPercentage > 1) {
+                let dTime = (now - startPercentageTime) / 1000;
+                let eta = (dTime / dPercentage) * (100 - percentage);
+                eta = Math.round(flawMarge === 0 ? eta : (eta * (1 / flawMarge)));
+
+                let paragraph = document.getElementsByClassName("playable-frame__header--left")[0];
+                let element = document.createElement("div");
+                let text = document.createTextNode("ETA: " + eta + " seconde(n)");
+
+                element.id = "drillsterbot-eta";
+                element.className = "playable-frame__header--right";
+                element.appendChild(text);
+                paragraph.appendChild(element);
+            }
+
+            let sampleElement = document.createElement("p");
+            //Add sample element - check if removed to indicate new page
+            sampleElement.className = "loadindicator";
+            document.getElementsByClassName("dwc-button")[0].appendChild(sampleElement);
+
+            //Check what to do, 3 possibilities: retrieve, learn and set
+            setTimeout(() => {
+                if (document.getElementsByClassName("drl-introduction__ask__name")[0] !== undefined)
+                    retrieveAnswer();
+                else if (document.getElementsByClassName("question-component question-component--evaluated")[0] !== undefined)
+                    learnAnswer();
+                else
+                    setAnswer();
+            }, 1);
+        }
+    }, answerTime);
+}
+
+function stopPlaying() {
+    if (frameRefreshLoopId !== undefined)
+        clearInterval(frameRefreshLoopId);
+
+    startPercentage = -1;
+    startPercentageTime = -1;
+    currentDrill = undefined;
+    frameRefreshLoopId = undefined;
 }
 
 function setAnswer() {
     let questionObject = document.getElementsByClassName("question-component__ask__term")[0];
     let columnObject = document.getElementsByClassName("question-component__tell__name")[0];
+    let question;
 
-    let question = tryAction(() => {
-        if (columnObject !== undefined) {
-            if (!columnAsked)
-                columnAsked = true;
+    if (columnObject !== undefined) {
+        if (!columnAsked)
+            columnAsked = true;
 
-            return columnObject.innerText.toLowerCase() + "\\" + questionObject.innerText;
-        }
-
-        return questionObject.innerText;
-    });
-
-    if (question === undefined)
-        return;
+        question = columnObject.innerText.toLowerCase() + "\\" + questionObject.innerText;
+    } else {
+        question = questionObject.innerText;
+    }
 
     if (wordlist[question] !== undefined) {
         let answerToSet = wordlist[question];
@@ -174,151 +175,100 @@ function setAnswer() {
             mistakes++;
         }
 
-        let open = document.getElementsByClassName("multiple-choice-input__frame")[0] === undefined;
-
-        if(!(open ? setOpenAnswer(answerToSet) : setMultipleChoiceAnswer(answerToSet))) {
-            return;
-        }
-
-        setTimeout(function () {
-            let correctAnswers = document.getElementsByClassName("drl-term drl-term--disabled");
-
-            if(correctAnswers.length > 0) {
-                let correctAnswerList = "";
-
-                for (let i = 0; i < correctAnswers.length; i++) {
-                    let correctAnswer = correctAnswers[i];
-
-                    if(correctAnswer.className !== "drl-term drl-term--disabled")
-                        continue;
-
-                    let answer = correctAnswer.innerText;
-                    correctAnswerList = correctAnswerList + (correctAnswerList.length > 0 ? "+" : "") + answer;
-                }
-
-                wordlist[question] = correctAnswerList;
-
-                if (enableStorage)
-                    saveWordlist(currentDrill);
-
-                document.getElementsByClassName("dwc-button dwc-button--contained")[0].click();
-                setTimeout(main, answerTime);
-            } else {
-                main();
-            }
-        }, answerTime);
+        if (document.getElementsByClassName("multiple-choice-input__frame")[0] !== undefined)
+            setMultipleChoiceAnswer(answerToSet);
+        else
+            setOpenAnswer(answerToSet);
     } else {
         retrieveAnswer();
     }
 }
 
 function setOpenAnswer(value) {
-    try {
-        let inputField = document.getElementsByClassName("dwc-text-field__input")[0];
-        let submitButton = document.getElementsByClassName("drl-enlarged-button")[0];
+    let inputField = document.getElementsByClassName("dwc-text-field__input")[0];
 
-        pressSampleKey(inputField);
-        inputField.value = value === undefined ? "a" : value;
-        submitButton.click();
-        return true;
-    } catch (error) {
-        setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
-        return false;
-    }
+    inputField.value = value === undefined || value === "" ? "a" : value.split("+")[0];
+    inputField.dispatchEvent(new KeyboardEvent("keydown", {"key": "a"}));
+    inputField.dispatchEvent(new KeyboardEvent("keyup", {"key": "a"}));
+
+    setTimeout(() => document.getElementsByClassName("drl-enlarged-button")[0].click(), 1);
 }
 
 function setMultipleChoiceAnswer(value) {
     let values = (value === undefined ? "" : value).split("+");
+    let multipleChoiceTable = document.getElementsByClassName("dwc-markup-text");
+    let answerButtonSelectionChoice = document.getElementsByClassName("drl-enlarged-button")[0];
+    let answerButtonPresent = answerButtonSelectionChoice !== undefined;
+    let foundAnyAnswer = false;
 
-    try {
-        let multipleChoiceTable = document.getElementsByClassName("dwc-markup-text");
-        let answerButtonSelectionChoice = document.getElementsByClassName("drl-enlarged-button")[0];
-        let answerButtonPresent = answerButtonSelectionChoice !== undefined;
-        let foundAnyAnswer = false;
+    for (let i = 1 /*1, because it contains the question*/; i < multipleChoiceTable.length; i++) {
+        let answerButton = multipleChoiceTable[i];
 
-        for(let i = 1 /*1, because it contains the question*/; i < multipleChoiceTable.length; i++) {
-            let answerButton = multipleChoiceTable[i];
-
-            for (let j = 0; j < values.length; j++) {
-                if((value === "Foutmarge" && answerButton.innerText !== values[j]) ||
-                    (value !== "Foutmarge" && answerButton.innerText === values[j])) {
-                    answerButton.click();
-                    foundAnyAnswer = true;
-                }
+        for (let j = 0; j < values.length; j++) {
+            if ((value === "Foutmarge" && answerButton.innerText !== values[j]) ||
+                (value !== "Foutmarge" && answerButton.innerText === values[j])) {
+                answerButton.click();
+                foundAnyAnswer = true;
             }
         }
-
-        if(!foundAnyAnswer) {
-            retrieveAnswer();
-            return false;
-        }
-
-        setTimeout(function () {
-            if(answerButtonPresent)
-                answerButtonSelectionChoice.click();
-        }, 1);
-
-        return true;
-    } catch (error) {
-        setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
-        return false;
     }
+
+    if (!foundAnyAnswer) {
+        retrieveAnswer();
+        return;
+    }
+
+    setTimeout(function () {
+        if (answerButtonPresent)
+            answerButtonSelectionChoice.click();
+    }, 1);
 }
 
 function retrieveAnswer() {
     let idkButton = document.getElementsByClassName("question-component__button question-component__button--dontknow")[0];
 
     if (idkButton !== undefined) {
-        try {
-            idkButton.click();
-        } catch (error) {
-            console.log("Could not find element. Retrying in 50ms");
-            setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
-            return;
-        }
+        idkButton.click();
+        return;
     }
 
-    setTimeout(function () {
-        let columnObject = document.getElementsByClassName("drl-introduction__tell__name")[0];
-        let answerObjects = document.getElementsByClassName("dwc-markup-text");
+    let columnObject = document.getElementsByClassName("drl-introduction__tell__name")[0];
+    let answerObjects = document.getElementsByClassName("dwc-markup-text");
+    let column = columnObject === undefined ? undefined : columnObject.innerText;
+    let question = answerObjects[0].innerText;
+    let answer = "";
 
-        let column = tryAction(() => {
-            return columnObject === undefined ? undefined : columnObject.innerText
-        });
+    for (let i = 1 /*1, because it contains the question*/; i < answerObjects.length; i++)
+        answer = answer + (answer.length > 0 ? "+" : "") + answerObjects[i].innerText;
 
-        let question = tryAction(() => {
-            return answerObjects[0].innerText
-        });
+    if (columnAsked && columnObject !== undefined)
+        wordlist[column.toLowerCase() + "\\" + question] = answer;
+    else
+        wordlist[question] = answer;
 
-        let answer = tryAction(() => {
-            let answers = "";
+    if (enableStorage)
+        saveWordlist(currentDrill);
 
-            for (let i = 1 /*1, because it contains the question*/; i < answerObjects.length; i++) {
-                answers = answers + (answers.length > 0 ? "+" : "") + answerObjects[i].innerText;
-            }
+    document.getElementsByClassName("dwc-button")[0].click();
+}
 
-            return answers;
-        });
+function learnAnswer() {
+    let correctAnswers = document.getElementsByClassName("dwc-markup-text");
+    let question = correctAnswers[0];
+    let correctAnswerList = "";
 
-        if (question === undefined || answer === undefined)
-            return;
+    for (let i = 1; i < correctAnswers.length - 1; i++) {
+        let correctAnswer = correctAnswers[i];
+        let answer = correctAnswer.innerText;
+        correctAnswerList = correctAnswerList + (correctAnswerList.length > 0 ? "+" : "") + answer;
+    }
 
-        if (columnAsked && columnObject !== undefined)
-            wordlist[column.toLowerCase() + "\\" + question] = answer;
-        else
-            wordlist[question] = answer;
+    wordlist[question.innerText] = correctAnswerList;
 
-        if (enableStorage)
-            saveWordlist(currentDrill);
+    if (enableStorage)
+        saveWordlist(currentDrill);
 
-        try {
-            document.getElementsByClassName("dwc-button dwc-button--contained")[0].click();
-            setTimeout(main, answerTime);
-        } catch (error) {
-            console.log("Could not find element. Retrying in 50ms");
-            setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
-        }
-    }, answerTime);
+    document.getElementsByClassName("dwc-button")[0].click();
 }
 
 //Storage
@@ -381,44 +331,43 @@ function saveWordlist(drillTitle) {
     let completedText = headerString + text;
     let cookieSplit = completedText.match(/.{1,3800}/g);
 
-    for (let i = 0; i < cookieSplit.length; i++) {
+    for (let i = 0; i < cookieSplit.length; i++)
         saveCookie("Wordlist_" + drillTitle.replaceAll(" ", "_") + "_" + (i + 1), cookieSplit[i]);
+}
+
+function wordlistToMessage() {
+    let words = "";
+    let byCategory = {};
+
+    for (let [question, answer] of Object.entries(wordlist)) {
+        let categorySplit = question.split("\\");
+        let category = categorySplit.length > 1 ? categorySplit[0] : "Default";
+        let word = categorySplit[categorySplit.length > 1 ? 1 : 0];
+        let wordsOfCategory = byCategory[category];
+
+        if (wordsOfCategory === undefined)
+            wordsOfCategory = [];
+
+        wordsOfCategory[wordsOfCategory.length] = word + " = " + answer.replaceAll("+", " + ");
+        byCategory[category] = wordsOfCategory;
     }
-}
 
-function prepareForDrill() {
-    let title = document.getElementsByClassName("playable-frame__header__title")[0];
+    let categories = Object.keys(byCategory);
+    categories.sort();
 
-    if (title === undefined)
-        return;
+    for (let i = 0; i < categories.length; i++) {
+        let category = categories[i];
+        let wordlist = byCategory[category];
 
-    currentDrill = title.innerText;
-    wordlist = getWordlist(currentDrill);
-}
+        wordlist.sort();
+        words = (words.length > 0 ? words + "\n" : words) + "Categorie: " + category + "\n";
 
-//Util
-function tryAction(action) {
-    try {
-        return action();
-    } catch (error) {
-        console.log("Could not find element. Retrying in 50ms");
-        setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
+        for (let j = 0; j < wordlist.length; j++)
+            words = words + wordlist[j] + "\n";
     }
-}
 
-function pressSampleKey(inputField) {
-    try {
-        inputField.dispatchEvent(new KeyboardEvent("keydown", {"key": "a"}));
-        inputField.dispatchEvent(new KeyboardEvent("keyup", {"key": "a"}));
-    } catch (error) {
-        console.log("Could not find element. Retrying in 50ms");
-        setTimeout(async () => await chrome.runtime.sendMessage({retry: true}), 50);
-    }
-}
-
-function getPercentage() {
-    let percentage = document.getElementsByClassName("dwc-proficiency-meter__percentage")[0];
-    return percentage === undefined ? 100 : parseInt(percentage.innerText.replaceAll("%", ""));
+    navigator.clipboard.writeText(words).then(() =>
+        alert("Woordenlijst van " + currentDrill + " is gekopieerd naar het klembord!"));
 }
 
 start();

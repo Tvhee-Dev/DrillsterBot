@@ -1,32 +1,30 @@
 async function start() {
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
 
-    chrome.tabs.sendMessage(tab.id, {storage: "GET"}, function (response) {
-            if (chrome.runtime.lastError) {
-                document.getElementById("instruction").remove();
-                const element = document.getElementsByClassName("option");
+    chrome.tabs.sendMessage(tab.id, {storage: "GET"}, (response) => {
+        if (chrome.runtime.lastError) {
+            document.getElementById("instruction").remove();
+            const element = document.getElementsByClassName("option");
 
-                if (element.length > 0) {
-                    while (element.length > 0) {
-                        element[0].remove();
-                    }
-                }
-
-                const paragraph = document.createElement("p");
-                const text = document.createTextNode("Je kunt de instellingen alleen wijzigen als je in een Drill bent!");
-                paragraph.appendChild(text);
-
-                const target = document.querySelector("#credits");
-                target.parentNode.insertBefore(paragraph, target);
-                return;
+            if (element.length > 0) {
+                while (element.length > 0)
+                    element[0].remove();
             }
 
-            document.getElementById("saveWordlist").checked = response.storage_enabled;
-            document.getElementById("answerTime").value = response.answer_time;
-            document.getElementById("flawMarge").value = response.flaw_marge;
-            document.getElementById("autoClose").checked = response.auto_close;
+            const paragraph = document.createElement("p");
+            const text = document.createTextNode("Je kunt de instellingen alleen wijzigen als je in een Drill bent!");
+            paragraph.appendChild(text);
+
+            const target = document.querySelector("#credits");
+            target.parentNode.insertBefore(paragraph, target);
+            return;
         }
-    );
+
+        document.getElementById("saveWordlist").checked = response.storage_enabled;
+        document.getElementById("answerTime").value = response.answer_time;
+        document.getElementById("flawMarge").value = response.flaw_marge;
+        document.getElementById("autoClose").checked = response.auto_close;
+    });
 
     document.getElementById("saveWordlist").addEventListener("click", () => setSaveWordlist());
     document.getElementById("autoClose").addEventListener("click", () => setAutoClose());
@@ -52,8 +50,10 @@ async function setAnswerTime() {
 
     if (value > 999)
         value = 999;
-    else if (value < 100)
-        value = 100;
+    else if (value < 1)
+        value = 1;
+
+    answerTime.value = value;
 
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
     await chrome.tabs.sendMessage(tab.id, {set_answer_time: value});
@@ -64,12 +64,14 @@ async function setFlawMarge() {
     let value = flawMarge.value;
 
     if (value > 99)
-        value = 25;
+        value = 99;
     else if (value < 0)
         value = 25;
+
+    flawMarge.value = value;
 
     let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
     await chrome.tabs.sendMessage(tab.id, {set_flaw_marge: value});
 }
 
-start();
+start().then();

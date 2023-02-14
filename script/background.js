@@ -1,16 +1,9 @@
 let sentNotifications = {};
 
 function start() {
-    chrome.runtime.onInstalled.addListener(async () => {
-        await chrome.action.setBadgeText({
-            text: "OFF",
-        });
-    });
-
     chrome.commands.onCommand.addListener(async (command, tab) => {
-        if (!tab.url.startsWith("https://www.drillster.com/user")) {
+        if (!tab.url.startsWith("https://www.drillster.com/user"))
             return;
-        }
 
         if (command === "start_stop") {
             const prevState = await chrome.action.getBadgeText({tabId: tab.id});
@@ -29,10 +22,7 @@ function start() {
 
     chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         if (request.percentage !== undefined) {
-            let notification = {
-                type: "basic",
-                iconUrl: "../images/icon-128.png",
-                title: "DrillsterBot",
+            let notification = {type: "basic", iconUrl: "../images/icon-128.png", title: "DrillsterBot",
                 message: "DrillsterBot is klaar met " + request.drill_title + "! Vragen: " + request.questions + ", Fouten: " + request.flaws,
                 buttons: [{title: "Close"}]
             }
@@ -44,12 +34,10 @@ function start() {
                 await chrome.tabs.remove(sender.tab.id);
             }
 
-            chrome.notifications.create("drill_finished", notification, function (notificationId) {
+            chrome.notifications.create("drill_finished", notification, (notificationId) => {
                 if (!request.auto_close)
                     sentNotifications[notificationId] = sender.tab.id;
             });
-        } else if (request.retry !== undefined) {
-            await sendState("ON", sender.tab.id);
         } else if (request.initialize !== undefined) {
             await sendState("OFF", sender.tab.id);
         }
