@@ -10,6 +10,7 @@
     "128": "images/icon-128.png"
   },
   "action": {
+    "default_title": "Open de instellingen",
     "default_popup": "menu/popup.html",
     "default_icon": {
       "16": "images/icon-16.png",
@@ -27,7 +28,8 @@
         "https://*.drillster.com/*"
       ],
       "js": [
-        "script/content.js"
+        "script/content.js",
+        "script/frame.js"
       ],
       "all_frames": true
     }
@@ -39,8 +41,8 @@
     "activeTab",
     "webNavigation",
     "contextMenus",
-    "cookies",
-    "notifications"
+    "notifications",
+    "storage"
   ],
   "commands": {
     "start_stop": {

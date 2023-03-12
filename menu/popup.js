@@ -1,50 +1,31 @@
-async function start() {
-    let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
-
-    chrome.tabs.sendMessage(tab.id, {storage: "GET"}, (response) => {
-        if (chrome.runtime.lastError) {
-            document.getElementById("instruction").remove();
-            const element = document.getElementsByClassName("option");
-
-            if (element.length > 0) {
-                while (element.length > 0)
-                    element[0].remove();
-            }
-
-            const paragraph = document.createElement("p");
-            const text = document.createTextNode("Je kunt de instellingen alleen wijzigen als je in een Drill bent!");
-            paragraph.appendChild(text);
-
-            const target = document.querySelector("#credits");
-            target.parentNode.insertBefore(paragraph, target);
-            return;
-        }
-
+//Popup menu script - communicating with background.js
+function start() {
+    chrome.runtime.sendMessage({get_storage: true}, (response) => {
         document.getElementById("saveWordlist").checked = response.storage_enabled;
         document.getElementById("answerTime").value = response.answer_time;
         document.getElementById("flawMarge").value = response.flaw_marge;
         document.getElementById("autoClose").checked = response.auto_close;
+
+        document.getElementById("saveWordlist").addEventListener("click", () => setSaveWordlist());
+        document.getElementById("autoClose").addEventListener("click", () => setAutoClose());
+        document.getElementById("answerTime").addEventListener("input", () => setAnswerTime());
+        document.getElementById("flawMarge").addEventListener("input", () => setFlawMarge());
     });
-
-    document.getElementById("saveWordlist").addEventListener("click", () => setSaveWordlist());
-    document.getElementById("autoClose").addEventListener("click", () => setAutoClose());
-    document.getElementById("answerTime").addEventListener("input", () => setAnswerTime());
-    document.getElementById("flawMarge").addEventListener("input", () => setFlawMarge());
 }
 
-async function setSaveWordlist() {
+function setSaveWordlist() {
     const wordlist = document.getElementById("saveWordlist");
-    let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
-    await chrome.tabs.sendMessage(tab.id, {set_storage_enabled: wordlist.checked});
+    chrome.runtime.sendMessage({set_storage_enabled: wordlist.checked}, () => {
+    });
 }
 
-async function setAutoClose() {
+function setAutoClose() {
     const autoClose = document.getElementById("autoClose");
-    let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
-    await chrome.tabs.sendMessage(tab.id, {set_auto_close: autoClose.checked});
+    chrome.runtime.sendMessage({set_auto_close: autoClose.checked}, () => {
+    });
 }
 
-async function setAnswerTime() {
+function setAnswerTime() {
     const answerTime = document.getElementById("answerTime");
     let value = answerTime.value;
 
@@ -54,12 +35,11 @@ async function setAnswerTime() {
         value = 1;
 
     answerTime.value = value;
-
-    let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
-    await chrome.tabs.sendMessage(tab.id, {set_answer_time: value});
+    chrome.runtime.sendMessage({set_answer_time: value}, () => {
+    });
 }
 
-async function setFlawMarge() {
+function setFlawMarge() {
     const flawMarge = document.getElementById("flawMarge");
     let value = flawMarge.value;
 
@@ -69,9 +49,8 @@ async function setFlawMarge() {
         value = 25;
 
     flawMarge.value = value;
-
-    let [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
-    await chrome.tabs.sendMessage(tab.id, {set_flaw_marge: value});
+    chrome.runtime.sendMessage({set_flaw_marge: value}, () => {
+    });
 }
 
-start().then();
+start();

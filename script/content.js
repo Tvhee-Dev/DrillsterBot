@@ -1,373 +1,238 @@
-//Storage
-let enableStorage = undefined;
-let autoClose = undefined;
-let answerTime = undefined;
-let flawMarge = undefined;
-let wordlist = undefined;
+//Drillster repetoire overview script
+let questions = 0;
+let flaws = 0;
 
-//Runtime
-let frameRefreshLoopId = undefined;
-let currentDrill = undefined;
-let columnAsked = false;
-let mistakes = 0;
-let questionsTaken = 0;
-
-//Timing
-let startPercentage = -1;
-let startPercentageTime = -1;
+//Queue
+let currentCourse = undefined;
+let courseQueue = [];
+let drillQueue = [];
 
 function start() {
     try {
-        if (window.self === window.top)
+        if (window.self !== window.top)
             return;
     } catch (e) {
     }
 
-    chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-        if (request.storage !== undefined) {
-            sendResponse({storage_enabled: enableStorage, answer_time: answerTime,
-                flaw_marge: flawMarge, auto_close: autoClose});
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.run_mode !== undefined) {
+            if (request.run_mode === "ON") {
+                //Check if the frame.js script is already injected, otherwise load the repertoire
+                if (document.getElementsByTagName("iframe").length === 0) {
+                    if (request.url.startsWith("https://www.drillster.com/user/repertoire")) {
+                        loadRepertoire();
+                    } else if (request.startsWith("https://www.drillster.com/user")) {
+                        document.getElementsByClassName("fe-a fd-a fdn-a")[0].click();
+                        loadRepertoire();
+                    }
+                }
+            }
+        } else if (request.drill_finished !== undefined) {
+            questions += request.questions;
+            flaws += request.flaws;
+
+            finishDrill(request.drill_finished);
+        } else if (request.storage !== undefined) {
+            sendResponse({can_popup: false});
             return true;
         }
-
-        if (request.set_answer_time !== undefined)
-            saveCookie("Answer_Delay", (answerTime = request.set_answer_time));
-
-        if (request.set_storage_enabled !== undefined)
-            saveCookie("Storage_Enabled", (enableStorage = request.set_storage_enabled));
-
-        if (request.set_auto_close !== undefined)
-            saveCookie("Auto_Close", (autoClose = request.set_auto_close));
-
-        if (request.set_flaw_marge !== undefined)
-            saveCookie("Flaw_Marge", (flawMarge = request.set_flaw_marge));
-
-        if (request.run_mode !== undefined) {
-            if (request.run_mode === "ON")
-                startPlaying();
-            else if (request.run_mode === "OFF")
-                stopPlaying();
-
-            sendResponse({running: currentDrill !== undefined});
-        }
-
-        if (request.show_wordlist !== undefined)
-            wordlistToMessage();
 
         sendResponse();
         return true;
     });
+}
 
-    setTimeout(function () {
-        enableStorage = getCookie("Storage_Enabled", "true") === "true";
-        autoClose = getCookie("Auto_Close", "true") === "true";
-        answerTime = parseInt(getCookie("Answer_Delay", "1"));
-        flawMarge = parseInt(getCookie("Flaw_Marge", "0"));
+function loadRepertoire() {
+    let loadPage = setInterval(() => {
+        if (document.getElementsByClassName("button radius tiny secondary fe-a fd-a fdn-a")[0] === undefined)
+            return;
 
-        if (flawMarge > 99 || flawMarge < 0)
-            flawMarge = 0;
+        clearInterval(loadPage);
 
-        if (answerTime > 999 || answerTime < 1)
-            answerTime = 1;
+        let elements = document.getElementsByClassName("fe-div fd-div course item");
+        let noneSelected = document.getElementsByClassName("button-flat fe-span fd-span")[0] === undefined;
 
-        chrome.runtime.sendMessage({initialize: true}).then();
+        if (noneSelected && !confirm("Wil je echt alle Drills doen?")) {
+            chrome.runtime.sendMessage({off_state: true}).then();
+            return;
+        }
+
+        function scanDrills() {
+            for (let index in elements) {
+                let element = elements[index];
+
+                if (element.className === "fe-div fd-div course item") {
+                    let percent = parseInt(element.getElementsByClassName("fe-span fd-span")[0].innerText);
+                    let checkbox = element.getElementsByTagName("input")[0];
+                    let courseTitle = element.getElementsByClassName("fe-h2 fd-h2")[0].innerText;
+
+                    if (percent !== 100) {
+                        let showMoreButton = element.getElementsByClassName("button-flat secondary left only-item fe-a fd-a fdn-a")[0];
+
+                        if (showMoreButton !== undefined) {
+                            let courseElements = element.getElementsByClassName("item fe-div fd-div");
+
+                            if(courseElements.length === 0 && (checkbox.checked || noneSelected)) {
+                                drillQueue.push(courseTitle + "|ALL");
+                                continue;
+                            }
+
+                            for (let courseIndex in courseElements) {
+                                let courseElement = courseElements[courseIndex];
+
+                                if (!(courseElement instanceof HTMLElement) || courseElement.className !== "item fe-div fd-div")
+                                    continue;
+
+                                let courseElementPercent = parseInt(courseElement.getElementsByClassName("label proficiency only-item fe-span fd-span")[0].innerText);
+                                let courseElementCheckbox = courseElement.getElementsByTagName("input")[0];
+
+                                if (courseElementPercent !== 100 && (courseElementCheckbox.checked || checkbox.checked || noneSelected))
+                                    drillQueue.push(courseTitle + "|" + courseElement.getElementsByClassName("header truncate-gray-gradient fe-div fd-div")[0].innerText);
+                            }
+                        } else if (checkbox.checked || noneSelected) {
+                            drillQueue.push(courseTitle);
+                        }
+                    }
+                }
+            }
+
+            if (drillQueue.length === 0 && elements.length !== 0) {
+                alert("Alle Drills zijn al op 100%!");
+                chrome.runtime.sendMessage({off_state: true}).then();
+                return;
+            }
+
+            startDrill(drillQueue[0]);
+        }
+
+        if(noneSelected)
+            clickAllShowMoreButtons(() => scanDrills());
+        else
+            scanDrills();
     }, 1);
+}
 
-    let titleLoader = setInterval(() => {
-        let drillTitle = document.getElementsByClassName("details-page__cover__title")[0];
+function startDrill(drillTitle) {
+    let elements = document.getElementsByClassName("item fe-div fd-div");
 
-        if (drillTitle !== undefined) {
-            currentDrill = drillTitle.innerText;
-            wordlist = getWordlist(currentDrill);
-            clearInterval(titleLoader);
+    function sendStartSignal(element) {
+        element.getElementsByClassName("button-flat fe-a fd-a fdn-a")[0].click();
+
+        setTimeout(() => chrome.runtime.sendMessage({on_state: true}).then(), 1000);
+    }
+
+    for (let index in elements) {
+        let element = elements[index];
+
+        if (!(element instanceof HTMLElement))
+            continue;
+
+        let courseTitle = element.getElementsByClassName("fe-h2 fd-h2")[0];
+        let elementTitle = element.getElementsByClassName("header truncate-gray-gradient fe-div fd-div")[0];
+
+        if (courseTitle !== undefined && courseTitle.innerText === drillTitle.split("|")[0]) {
+            let showMoreButton = element.getElementsByClassName("material-icons middle fe-i fd-i")[0];
+
+            if(showMoreButton === undefined) {
+                sendStartSignal(element);
+                return;
+            }
+
+            clickShowMoreButton(showMoreButton, () => {
+                if(drillTitle.split("|")[1] === "ALL") {
+                    courseQueue = [];
+                    currentCourse = courseTitle.innerText;
+                    let courseElements = element.getElementsByClassName("item fe-div fd-div");
+
+                    for (let courseIndex in courseElements) {
+                        let courseElement = courseElements[courseIndex];
+
+                        if (!(courseElement instanceof HTMLElement) || courseElement.className !== "item fe-div fd-div")
+                            continue;
+
+                        let courseElementPercent = parseInt(courseElement.getElementsByClassName("label proficiency only-item fe-span fd-span")[0].innerText);
+
+                        if (courseElementPercent !== 100)
+                            courseQueue.push(courseTitle.innerText + "|" + courseElement.getElementsByClassName("header truncate-gray-gradient fe-div fd-div")[0].innerText);
+                    }
+
+                    startDrill(courseQueue[0]);
+                    return;
+                }
+
+                startDrill(drillTitle.split("|")[1]);
+            });
+        } else if (elementTitle !== undefined && elementTitle.innerText === drillTitle) {
+            sendStartSignal(element);
+        }
+    }
+}
+
+function clickAllShowMoreButtons(runAfter) {
+    let clickMoreLoad = setInterval(() => {
+        let moreButton = document.getElementsByClassName("button tiny secondary gray radius fe-a fd-a fdn-a")[0];
+
+        if (moreButton !== undefined) {
+            moreButton.click();
+            return;
+        }
+
+        clearInterval(clickMoreLoad);
+
+        let showMoreButtons = document.getElementsByClassName("material-icons middle fe-i fd-i").length;
+        let index = 0;
+
+        function takeButton() {
+            clickShowMoreButton(showMoreButtons[index], () => {
+                index++;
+
+                if(index >= showMoreButtons)
+                    runAfter();
+                else
+                    takeButton();
+            });
+        }
+
+        takeButton();
+    }, 50);
+}
+
+function clickShowMoreButton(button, runAfter) {
+    if (button.innerText === "expand_more")
+        button.click();
+
+    let courseElementLoad = setInterval(() => {
+        if (document.getElementsByClassName("spinner").length === 0) {
+            clearInterval(courseElementLoad);
+            runAfter();
         }
     }, 50);
 }
 
-function startPlaying() {
-    frameRefreshLoopId = setInterval(() => {
-        const now = new Date().getTime();
-        let percentageElement = document.getElementsByClassName("dwc-proficiency-meter__percentage")[0];
-        let percentage = 100;
+function finishDrill(drillTitle) {
+    function startNextDrillQueue() {
+        let index = drillQueue.indexOf(drillTitle) + 1;
 
-        if(percentageElement !== undefined)
-            percentage = parseInt(percentageElement.innerText.replaceAll("%", ""));
-
-        if (percentage === 100 || currentDrill === undefined) {
-            chrome.runtime.sendMessage({percentage: 100, questions: questionsTaken, flaws: mistakes,
-                drill_title: currentDrill, auto_close: autoClose}).then();
-
-            stopPlaying();
-            return;
-        }
-
-        if (document.getElementsByClassName("loadindicator").length === 0) {
-            if(startPercentage < 0 || startPercentageTime < 0) {
-                startPercentage = percentage;
-                startPercentageTime = now;
-            }
-
-            let dPercentage = percentage - startPercentage;
-
-            if(dPercentage > 1) {
-                let dTime = (now - startPercentageTime) / 1000;
-                let eta = (dTime / dPercentage) * (100 - percentage);
-                eta = Math.round(flawMarge === 0 ? eta : (eta * (1 / flawMarge)));
-
-                let paragraph = document.getElementsByClassName("playable-frame__header--left")[0];
-                let element = document.createElement("div");
-                let text = document.createTextNode("ETA: " + eta + " seconde(n)");
-
-                element.id = "drillsterbot-eta";
-                element.className = "playable-frame__header--right";
-                element.appendChild(text);
-                paragraph.appendChild(element);
-            }
-
-            let sampleElement = document.createElement("p");
-            //Add sample element - check if removed to indicate new page
-            sampleElement.className = "loadindicator";
-            document.getElementsByClassName("dwc-button")[0].appendChild(sampleElement);
-
-            //Check what to do, 3 possibilities: retrieve, learn and set
-            setTimeout(() => {
-                if (document.getElementsByClassName("drl-introduction__ask__name")[0] !== undefined)
-                    retrieveAnswer();
-                else if (document.getElementsByClassName("question-component question-component--evaluated")[0] !== undefined)
-                    learnAnswer();
-                else
-                    setAnswer();
-            }, 1);
-        }
-    }, answerTime);
-}
-
-function stopPlaying() {
-    if (frameRefreshLoopId !== undefined)
-        clearInterval(frameRefreshLoopId);
-
-    startPercentage = -1;
-    startPercentageTime = -1;
-    currentDrill = undefined;
-    frameRefreshLoopId = undefined;
-}
-
-function setAnswer() {
-    let questionObject = document.getElementsByClassName("question-component__ask__term")[0];
-    let columnObject = document.getElementsByClassName("question-component__tell__name")[0];
-    let question;
-
-    if (columnObject !== undefined) {
-        if (!columnAsked)
-            columnAsked = true;
-
-        question = columnObject.innerText.toLowerCase() + "\\" + questionObject.innerText;
-    } else {
-        question = questionObject.innerText;
-    }
-
-    if (wordlist[question] !== undefined) {
-        let answerToSet = wordlist[question];
-        questionsTaken++;
-
-        if ((mistakes / questionsTaken) < (flawMarge / 100)) {
-            answerToSet = "Foutmarge";
-            mistakes++;
-        }
-
-        if (document.getElementsByClassName("multiple-choice-input__frame")[0] !== undefined)
-            setMultipleChoiceAnswer(answerToSet);
+        if (index === drillQueue.length)
+            chrome.runtime.sendMessage({drills_finished: true, questions: questions, flaws: flaws}).then();
         else
-            setOpenAnswer(answerToSet);
-    } else {
-        retrieveAnswer();
+            startDrill(drillQueue[index]);
     }
-}
 
-function setOpenAnswer(value) {
-    let inputField = document.getElementsByClassName("dwc-text-field__input")[0];
+    if(currentCourse !== undefined) {
+        let index = courseQueue.indexOf(currentCourse + "|" + drillTitle) + 1;
 
-    inputField.value = value === undefined || value === "" ? "a" : value.split("+")[0];
-    inputField.dispatchEvent(new KeyboardEvent("keydown", {"key": "a"}));
-    inputField.dispatchEvent(new KeyboardEvent("keyup", {"key": "a"}));
-
-    setTimeout(() => document.getElementsByClassName("drl-enlarged-button")[0].click(), 1);
-}
-
-function setMultipleChoiceAnswer(value) {
-    let values = (value === undefined ? "" : value).split("+");
-    let multipleChoiceTable = document.getElementsByClassName("dwc-markup-text");
-    let answerButtonSelectionChoice = document.getElementsByClassName("drl-enlarged-button")[0];
-    let answerButtonPresent = answerButtonSelectionChoice !== undefined;
-    let foundAnyAnswer = false;
-
-    for (let i = 1 /*1, because it contains the question*/; i < multipleChoiceTable.length; i++) {
-        let answerButton = multipleChoiceTable[i];
-
-        for (let j = 0; j < values.length; j++) {
-            if ((value === "Foutmarge" && answerButton.innerText !== values[j]) ||
-                (value !== "Foutmarge" && answerButton.innerText === values[j])) {
-                answerButton.click();
-                foundAnyAnswer = true;
-            }
+        if(index === courseQueue.length) {
+            drillTitle = currentCourse + "|ALL";
+            startNextDrillQueue();
+        }
+        else {
+            startDrill(courseQueue[index]);
         }
     }
-
-    if (!foundAnyAnswer) {
-        retrieveAnswer();
-        return;
+    else {
+        startNextDrillQueue();
     }
-
-    setTimeout(function () {
-        if (answerButtonPresent)
-            answerButtonSelectionChoice.click();
-    }, 1);
-}
-
-function retrieveAnswer() {
-    let idkButton = document.getElementsByClassName("question-component__button question-component__button--dontknow")[0];
-
-    if (idkButton !== undefined) {
-        idkButton.click();
-        return;
-    }
-
-    let columnObject = document.getElementsByClassName("drl-introduction__tell__name")[0];
-    let answerObjects = document.getElementsByClassName("dwc-markup-text");
-    let column = columnObject === undefined ? undefined : columnObject.innerText;
-    let question = answerObjects[0].innerText;
-    let answer = "";
-
-    for (let i = 1 /*1, because it contains the question*/; i < answerObjects.length; i++)
-        answer = answer + (answer.length > 0 ? "+" : "") + answerObjects[i].innerText;
-
-    if (columnAsked && columnObject !== undefined)
-        wordlist[column.toLowerCase() + "\\" + question] = answer;
-    else
-        wordlist[question] = answer;
-
-    if (enableStorage)
-        saveWordlist(currentDrill);
-
-    document.getElementsByClassName("dwc-button")[0].click();
-}
-
-function learnAnswer() {
-    let correctAnswers = document.getElementsByClassName("dwc-markup-text");
-    let question = correctAnswers[0];
-    let correctAnswerList = "";
-
-    for (let i = 1; i < correctAnswers.length - 1; i++) {
-        let correctAnswer = correctAnswers[i];
-        let answer = correctAnswer.innerText;
-        correctAnswerList = correctAnswerList + (correctAnswerList.length > 0 ? "+" : "") + answer;
-    }
-
-    wordlist[question.innerText] = correctAnswerList;
-
-    if (enableStorage)
-        saveWordlist(currentDrill);
-
-    document.getElementsByClassName("dwc-button")[0].click();
-}
-
-//Storage
-function saveCookie(name, text) {
-    localStorage.setItem("DrillsterBot_" + encodeURIComponent(name), encodeURIComponent(text));
-}
-
-function getCookie(name, defaultValue) {
-    let cookieName = "DrillsterBot_" + encodeURIComponent(name);
-    let result = localStorage.getItem(cookieName);
-
-    if (result === null)
-        return defaultValue;
-
-    return decodeURIComponent(result);
-}
-
-function getWordlist(drillTitle) {
-    const wordlist = {};
-    let title = drillTitle.replaceAll(" ", "_");
-    let cookieIndex = 1;
-    let cookieText;
-
-    while ((cookieText = getCookie("Wordlist_" + title + "_" + cookieIndex, "")) !== "") {
-        const wordsSplit = cookieText.split("|");
-
-        for (let i = 0; i < wordsSplit.length; i++) {
-            let dictionaryValue = wordsSplit[i];
-            let question = dictionaryValue.split("=")[0];
-            wordlist[question] = dictionaryValue.split("=")[1];
-        }
-
-        cookieIndex++;
-    }
-
-    return wordlist;
-}
-
-function saveWordlist(drillTitle) {
-    const header = {};
-    let text = "";
-
-    for (let [question, answer] of Object.entries(wordlist)) {
-        let currentQuestion = question + "=" + answer;
-        text = text + (text.length === 0 ? "" : "|") + currentQuestion;
-    }
-
-    let headerString = "";
-
-    for (let [key, number] of Object.entries(header)) {
-        if (headerString.length === 0)
-            headerString = key + "=" + number;
-        else
-            headerString = headerString + "|" + key + "=" + number;
-    }
-
-    if (headerString.length !== 0)
-        headerString = headerString + "<>";
-
-    let completedText = headerString + text;
-    let cookieSplit = completedText.match(/.{1,3800}/g);
-
-    for (let i = 0; i < cookieSplit.length; i++)
-        saveCookie("Wordlist_" + drillTitle.replaceAll(" ", "_") + "_" + (i + 1), cookieSplit[i]);
-}
-
-function wordlistToMessage() {
-    let words = "";
-    let byCategory = {};
-
-    for (let [question, answer] of Object.entries(wordlist)) {
-        let categorySplit = question.split("\\");
-        let category = categorySplit.length > 1 ? categorySplit[0] : "Default";
-        let word = categorySplit[categorySplit.length > 1 ? 1 : 0];
-        let wordsOfCategory = byCategory[category];
-
-        if (wordsOfCategory === undefined)
-            wordsOfCategory = [];
-
-        wordsOfCategory[wordsOfCategory.length] = word + " = " + answer.replaceAll("+", " + ");
-        byCategory[category] = wordsOfCategory;
-    }
-
-    let categories = Object.keys(byCategory);
-    categories.sort();
-
-    for (let i = 0; i < categories.length; i++) {
-        let category = categories[i];
-        let wordlist = byCategory[category];
-
-        wordlist.sort();
-        words = (words.length > 0 ? words + "\n" : words) + "Categorie: " + category + "\n";
-
-        for (let j = 0; j < wordlist.length; j++)
-            words = words + wordlist[j] + "\n";
-    }
-
-    navigator.clipboard.writeText(words).then(() =>
-        alert("Woordenlijst van " + currentDrill + " is gekopieerd naar het klembord!"));
 }
 
 start();
