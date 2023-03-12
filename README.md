@@ -78,7 +78,7 @@ Dit bijwerken zal voor een x aantal fouten achter elkaar, zodra er weer één go
 
 7. Blader daarna naar de map met de extensie, MAAR OPEN DEZE NIET. Druk daarna op "Map selecteren". Nu zou de extensie in de lijst moeten staan.
 
-![image](https://user-images.githubusercontent.com/74914328/224575315-8b7d5ca1-f7c9-40bd-81ee-57d0506b120a.png)
+![image](https://user-images.githubusercontent.com/74914328/224576409-bea84757-85bf-49a9-8a8d-22513f176595.png)
 
 8. Om de extensie ook zichtbaar te maken druk nog een keer op "extensies" (het puzzelstukje). Druk daarna op het oogje (in Chrome een pinnetje).
 
