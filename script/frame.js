@@ -1,4 +1,4 @@
-//Drill iFrame script - answering questions and learning values - communicating with background.js
+//Drill iframe script - answering questions and learning values - communicating with background.js
 //Storage
 let enableStorage = undefined;
 let autoClose = undefined;

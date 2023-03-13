@@ -51,13 +51,6 @@
         "mac": "Command+I"
       },
       "description": "Start / Stop the bot"
-    },
-    "wordlist": {
-      "suggested_key": {
-        "default": "Ctrl+B",
-        "mac": "Command+B"
-      },
-      "description": "Print the worldlist"
     }
   }
 }
