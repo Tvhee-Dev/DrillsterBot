@@ -8,6 +8,18 @@ import browser_cookie3
 
 
 def start():
+    print("Welcome to DrillsterBot!")
+    print("")
+    print("To navigate, use the arrow keys and the ENTER key")
+    print("> = select")
+    print("< = deselect")
+    print("^ = go up one element")
+    print("v = go down one element")
+    print("ENTER = continue")
+    print("")
+    print("Loading your repertoire...")
+    print("")
+
     set_token = False
 
     for cookie in browser_cookie3.load(domain_name="www.drillster.com"):
@@ -16,7 +28,7 @@ def start():
             set_token = True
 
     if set_token is False:
-        print("Please login to Drillster on your favourite webbrowser!")
+        print("No token found! Please login to Drillster on any webbrowser and keep the tab open!")
         exit()
 
     start_drills(select_drills())
@@ -24,20 +36,22 @@ def start():
 
 def select_drills():
     repertoire = drillster.get_repertoire()
+    playables = [(index["name"], index["id"]) for index in repertoire]
+    playables.append(("Exit", "-1"))
+    play_id = inquirer.prompt([inquirer.List("Playable", message="Selected playable", choices=playables)])["Playable"]
 
-    playable = inquirer.prompt(
-        [inquirer.List('Playable', message='Select playable',
-                       choices=[(index["name"], index["id"]) for index in repertoire])])["Playable"]
+    if play_id == "-1":
+        exit()
 
-    if [item["type"] for item in repertoire if item["id"] == playable][0] == "COURSE":
+    if [item["type"] for item in repertoire if item["id"] == play_id][0] == "COURSE":
         print("Loading course...")
-        results = drillster.get_course_content(playable)
+        print("")
 
-        return inquirer.prompt(
-            [inquirer.Checkbox('Drills', message='Select drills', choices=extract_playable_drills(results))])["Drills"]
-
-    elif [item["type"] for item in repertoire if item["id"] == playable][0] == "DRILL":
-        return playable
+        course_drills = drillster.get_course_content(play_id)
+        drill_list = extract_playable_drills(course_drills)
+        return inquirer.prompt([inquirer.Checkbox("Drills", message="Selected Drills", choices=drill_list)])["Drills"]
+    elif [item["type"] for item in repertoire if item["id"] == play_id][0] == "DRILL":
+        return play_id
     else:
         print("Cannot play tests using DrillsterBot")
         exit()
@@ -65,9 +79,11 @@ def extract_playable_drills(repertoire_list):
 
 # Define a function to play a drill given its ID
 def start_drill(drill_id):
-    print(f"Starting {drill_id}")
-    start_time = time.time()
     current_drill = drillster.Drill(drill_id)
+    proficiency = 0
+    start_time = time.time()
+
+    print(f"Starting {current_drill.get_name()}...")
 
     # Load existing dictionary of questions and answers from a file if it exists, otherwise create an empty dictionary
     if os.path.exists(f"./wordlists/{drill_id}.json"):
@@ -75,8 +91,6 @@ def start_drill(drill_id):
             stored_wordlist = json.load(file_content)
     else:
         stored_wordlist = {}
-
-    proficiency = 0
 
     while proficiency < 100:
         # Get a question from the drill
@@ -106,7 +120,7 @@ def start_drill(drill_id):
             json.dump(stored_wordlist, file_content)
 
     # Print a message indicating that the drill is completed and how long it took to complete
-    print(f"Completed {drill_id} in {round(time.time() - start_time)} seconds")
+    print(f"Completed {current_drill.get_name()} in {round(time.time() - start_time)} seconds")
 
 
 def start_drills(drill_ids):

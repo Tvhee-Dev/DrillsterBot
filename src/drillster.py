@@ -25,6 +25,9 @@ class Drill:
         self.reference = None
         self.__dict__ = requests.get(f"https://www.drillster.com/api/2.1.1/playable/{drill_id}", headers=header).json()
 
+    def get_name(self):
+        return self.name
+
     def get_question(self):
         question = requests.get(f"https://www.drillster.com/api/2.1.1/question/{self.id}", headers=header).json()
         question_object = question["question"]
