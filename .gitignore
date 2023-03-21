@@ -1,0 +1,5 @@
+/build
+/__pycache__
+/wordlists
+/src/__pycache__
+data.json

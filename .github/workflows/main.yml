@@ -1,0 +1,26 @@
+name: Build executable
+
+on:
+  push:
+    branches:
+      - DrillsterBot-v2
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Install Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11' # Replace x with the version of Python you want to use
+    - name: Install dependencies
+      run: pip install pyinstaller && pip install -r src/requirements.txt
+    - name: Build executable
+      run: pyinstaller --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py # Replace my_script.py with the name of your script
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: main.exe # Replace my_script.exe with the name you want to give to the executable file
+        path: dist/main.exe # Replace my_script.exe with the name of your script
