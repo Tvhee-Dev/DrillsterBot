@@ -1,5 +1,5 @@
 # DrillsterBot V2
-Please not that v2 is still in development and may include bugs.
+Please note that v2 is still in development and may include bugs.
 If you find one, let us know!
 ## Install instructions
 1. Go to https://github.com/Tvhee-Dev/DrillsterBot/releases/tag/v2
@@ -8,4 +8,4 @@ If you find one, let us know!
     ![Step 2](readmeImages/Step2.png?raw=true) 
 3. Run DrillsterBot-v2.x.exe
 
-   Make sure you don't delete the "wordlist" directory, doing this will result in the bot having to re-learn all your drills
+   Make sure you don't delete the "wordlists" directory, doing this will result in the bot having to re-learn all your drills
