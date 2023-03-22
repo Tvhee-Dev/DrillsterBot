@@ -88,9 +88,9 @@ def start_drill(drill_id):
     current_drill = drillster.Drill(drill_id)
     proficiency = 0
     start_time = time.time()
-
+    lock.acquire() # prevents multiple threads outputting to the same line
     print(f"Starting {current_drill.get_name()}...")
-
+    lock.release()
     # Load existing dictionary of questions and answers from a file if it exists, otherwise create an empty dictionary
     if os.path.exists(f"./wordlists/{drill_id}.json"):
         with open(f"./wordlists/{drill_id}.json", "r") as file_content:
@@ -133,14 +133,17 @@ def start_drill(drill_id):
         with open(f"./wordlists/{drill_id}.json", "w") as file_content:
             json.dump(stored_wordlist, file_content)
 
+    lock.acquire()
     # Print a message indicating that the drill is completed and how long it took to complete
     print(f"Completed {current_drill.get_name()} in {round(time.time() - start_time,1)} seconds")
+    lock.release()
 
 
 def start_drills(drill_ids):
     # Create threads for each drill and start them
     threads = []
-
+    global lock 
+    lock = threading.Lock()
     for drill_id in drill_ids:
         thread = threading.Thread(target=start_drill, args=(drill_id,))
         threads.append(thread)
