@@ -11,8 +11,6 @@ def start():
     print("Welcome to DrillsterBot!")
     print("")
     print("To navigate, use the arrow keys and the ENTER key")
-    print("> = select")
-    print("< = deselect")
     print("^ = go up one element")
     print("v = go down one element")
     print("ENTER = continue")
@@ -48,7 +46,7 @@ def select_drills():
         print("")
 
         course_drills = drillster.get_course_content(play_id)
-        print("Use SPACE to select drills, then press ENTER to start")
+        print("Use SPACE to select/deselect drills, then press ENTER to start")
         print("")
         drill_list = extract_playable_drills(course_drills)
         return inquirer.prompt([inquirer.Checkbox("Drills", message="Selected Drills", choices=drill_list)])["Drills"]
