@@ -93,13 +93,12 @@ def extract_playable_drills(repertoire_list):
 
 # Define a function to play a drill given its ID
 def start_drill(drill_id):
-    current_drill = drillster.Drill(drill_id)
     #proficiency = 0
     #start_time = time.time()
-    lock.acquire() # prevents multiple threads outputting to the same line
-    print(f"Starting {current_drill.get_name()}...")
-    lock.release()
     drill = drillster.Drill(drill_id)
+    lock.acquire() # prevents multiple threads outputting to the same line
+    print(f"Starting {drill.get_name()}...")
+    lock.release()
     current_drills.append(drill)
 
     # Load existing dictionary of questions and answers from a file if it exists, otherwise create an empty dictionary
@@ -118,7 +117,7 @@ def start_drill(drill_id):
         # Check if the question is already in the dictionary of questions and answers
         if question not in stored_wordlist:
             # Answer the question and add the question-answer pair to the dictionary
-            answer_object = current_drill.answer_question(answer="")
+            answer_object = drill.answer_question(answer="")
             if question_object["tell"]["composition"] != "SET":
                 stored_wordlist[question_object["ask"]["term"]["value"]] = \
                     answer_object["evaluation"]["termEvaluations"][1]["value"]
@@ -129,7 +128,6 @@ def start_drill(drill_id):
                         correct_answers.append(ans["value"])
                 stored_wordlist[question_object["ask"]["term"]["value"]] = \
                     correct_answers
-            answer_object = drill.answer_question(answer="")
         else:
             # Answer the question using the previously recorded answer from the dictionary
             answer_object = drill.answer_question(answer=stored_wordlist[question])
@@ -141,7 +139,7 @@ def start_drill(drill_id):
         os.mkdir("./wordlists/")
 
     with open(f"./wordlists/{drill_id}.json", "w") as file_content:
-        json.dump(stored_wordlist, file_content)
+        json.dump(stored_wordlist,file_content)
 
     #lock.acquire()
     # Print a message indicating that the drill is completed and how long it took to complete
@@ -159,7 +157,7 @@ def start_drills(drill_ids):
         threads.append(thread)
         thread.start()
 
-    print(f"Progress: [                    ] 0% (0 / {len(drill_ids)} Drills completed)")
+    #print(f"Progress: [                    ] 0% (0 / {len(drill_ids)} Drills completed)")
 
     # Wait for all threads to finish before continuing
     for thread in threads:
@@ -181,11 +179,13 @@ def update_progressbar():
     for drill in current_drills:
         # part / whole (for the correct calculation the start percentage has been removed
         # and this percentage is added to the total percentage with 1 / drill_amount
+
+        # !!! vvv This crashes if start_percentage = 100 vvv !!!
         percentage += (((drill.percentage - drill.start_percentage) / (100 - drill.start_percentage)) / drill_amount)
 
         if drill.percentage == 100:
             completed += 1
-
+    
     line = "Progress: ["
 
     for index in range(21):
@@ -196,8 +196,8 @@ def update_progressbar():
 
     line.join(f"] {round(percentage)}% ({completed} / {drill_amount} Drills completed)")
 
-    sys.stdout.write("\r")
-    sys.stdout.write(line)
+    #sys.stdout.write("\r")
+    #sys.stdout.write(line)
 
 
 start()

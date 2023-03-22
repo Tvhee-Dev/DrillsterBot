@@ -47,10 +47,9 @@ class Drill:
                 data.append(("answer",i))
             answer_response = requests.put(f"https://www.drillster.com/api/2.1.1/answer/{self.reference}",
                                         headers=header, data=data).json()
-        percentage = answer_response["proficiency"]["overall"]
-
+        self.percentage = answer_response["proficiency"]["overall"]
         if self.start_percentage == -1:
-            self.start_percentage = percentage
+            self.start_percentage = self.percentage
         return answer_response
 
     def continue_answering(self):
