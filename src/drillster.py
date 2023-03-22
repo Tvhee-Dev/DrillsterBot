@@ -21,6 +21,9 @@ def get_course_content(playable):
 
 
 class Drill:
+    start_percentage = -1
+    percentage = -1
+
     def __init__(self, drill_id):
         self.reference = None
         self.__dict__ = requests.get(f"https://www.drillster.com/api/2.1.1/playable/{drill_id}", headers=header).json()
@@ -44,4 +47,11 @@ class Drill:
                 data.append(("answer",i))
             answer_response = requests.put(f"https://www.drillster.com/api/2.1.1/answer/{self.reference}",
                                         headers=header, data=data).json()
+        percentage = answer_response["proficiency"]["overall"]
+
+        if self.start_percentage == -1:
+            self.start_percentage = percentage
         return answer_response
+
+    def continue_answering(self):
+        return self.percentage < 100
