@@ -1,10 +1,12 @@
+import sys
 import threading
 import inquirer
-import time
 import os
 import json
 import drillster
 import browser_cookie3
+
+current_drills = []
 
 
 def start():
@@ -31,6 +33,7 @@ def start():
 
     start_drills(select_drills())
 
+
 # Show menu to select courses/drills
 def select_drills():
     repertoire = drillster.get_repertoire()
@@ -48,19 +51,24 @@ def select_drills():
         course_drills = drillster.get_course_content(play_id)
         print("Use SPACE to select/deselect drills, then press ENTER to start")
         print("")
+
         drill_list = extract_playable_drills(course_drills)
-        selected_drills = inquirer.prompt([inquirer.Checkbox("Drills", message="Selected Drills", choices=[("Play all drills","playAll")]+drill_list)])["Drills"]
-        if "playAll" in selected_drills:
-            print("Playing all!")
+        selected_drills = inquirer.prompt(
+            [inquirer.Checkbox("Drills", message="Selected Drills",
+                               choices=[("Play all drills", "PlayAll")] + drill_list)])["Drills"]
+
+        if "PlayAll" in selected_drills:
+            print("Playing all Drills in this course!")
             # Gets all ids from tuple list
             return [drill[1] for drill in drill_list]
         else:
             return selected_drills
     elif [item["type"] for item in repertoire if item["id"] == play_id][0] == "DRILL":
-        return play_id
+        return [play_id]
     else:
         print("Cannot play tests using DrillsterBot")
         exit()
+
 
 # Define a function to extract drills from repertoire
 def extract_playable_drills(repertoire_list):
@@ -85,11 +93,8 @@ def extract_playable_drills(repertoire_list):
 
 # Define a function to play a drill given its ID
 def start_drill(drill_id):
-    current_drill = drillster.Drill(drill_id)
-    proficiency = 0
-    start_time = time.time()
-
-    print(f"Starting {current_drill.get_name()}...")
+    drill = drillster.Drill(drill_id)
+    current_drills.append(drill)
 
     # Load existing dictionary of questions and answers from a file if it exists, otherwise create an empty dictionary
     if os.path.exists(f"./wordlists/{drill_id}.json"):
@@ -98,35 +103,44 @@ def start_drill(drill_id):
     else:
         stored_wordlist = {}
 
-    while proficiency < 100:
+    while drill.continue_answering():
         # Get a question from the drill
-        question_object = current_drill.get_question()
+        question_object = drill.get_question()
+        question = question_object["ask"]["term"]["value"]
+        answer_object: json
 
         # Check if the question is already in the dictionary of questions and answers
-        if question_object["ask"]["term"]["value"] not in stored_wordlist:
+        if question not in stored_wordlist:
             # Answer the question and add the question-answer pair to the dictionary
-            answer_object = current_drill.answer_question(answer="")
-            stored_wordlist[question_object["ask"]["term"]["value"]] = \
-                answer_object["evaluation"]["termEvaluations"][1]["value"]
+            answer_object = drill.answer_question(answer="")
         else:
             # Answer the question using the previously recorded answer from the dictionary
-            answer_object = current_drill.answer_question(
-                answer=stored_wordlist[question_object["ask"]["term"]["value"]])
+            answer_object = drill.answer_question(answer=stored_wordlist[question])
 
-        # Check the overall proficiency level and continue answering questions until it is greater than or equal to 100
-        proficiency = answer_object["proficiency"]["overall"]
+        # If the answer is incorrect, learn and store it
+        if answer_object["evaluation"]["result"] == "INCORRECT":
+            correct_answers = answer_object["evaluation"]["termEvaluations"]
+            correct_answer = ""
+
+            for index in range(len(correct_answers)):
+                if index > 1:
+                    correct_answer.join("|")
+
+                correct_answer.join(correct_answers[index]["value"])
+
+            stored_wordlist[question] = correct_answer
+
+        update_progressbar()
 
     # Save the updated dictionary of questions and answers to a file
-    if os.path.exists("./wordlists/"):
-        with open(f"./wordlists/{drill_id}.json", "w") as file_content:
-            json.dump(stored_wordlist, file_content)
-    else:
+    if not os.path.exists("./wordlists/"):
         os.mkdir("./wordlists/")
-        with open(f"./wordlists/{drill_id}.json", "w") as file_content:
-            json.dump(stored_wordlist, file_content)
+
+    with open(f"./wordlists/{drill_id}.json", "w") as file_content:
+        json.dump(stored_wordlist, file_content)
 
     # Print a message indicating that the drill is completed and how long it took to complete
-    print(f"Completed {current_drill.get_name()} in {round(time.time() - start_time,1)} seconds")
+    # print(f"Completed {drill.get_name()} in {round(time.time() - drill.start_time, 1)} seconds")
 
 
 def start_drills(drill_ids):
@@ -138,9 +152,45 @@ def start_drills(drill_ids):
         threads.append(thread)
         thread.start()
 
+    print(f"Progress: [                    ] 0% (0 / {len(drill_ids)} Drills completed)")
+
     # Wait for all threads to finish before continuing
     for thread in threads:
         thread.join()
+
+    global current_drills
+    current_drills = []
+
+    print("")
+    print("DrillsterBot has finished!")
+
+
+def update_progressbar():
+    global current_drills
+    drill_amount = len(current_drills)
+    percentage = 0
+    completed = 0
+
+    for drill in current_drills:
+        # part / whole (for the correct calculation the start percentage has been removed
+        # and this percentage is added to the total percentage with 1 / drill_amount
+        percentage += (((drill.percentage - drill.start_percentage) / (100 - drill.start_percentage)) / drill_amount)
+
+        if drill.percentage == 100:
+            completed += 1
+
+    line = "Progress: ["
+
+    for index in range(21):
+        if (index * 5) > percentage:
+            line.join("=")
+        else:
+            line.join(" ")
+
+    line.join(f"] {round(percentage)}% ({completed} / {drill_amount} Drills completed)")
+
+    sys.stdout.write("\r")
+    sys.stdout.write(line)
 
 
 start()
