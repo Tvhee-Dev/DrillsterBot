@@ -49,7 +49,13 @@ def select_drills():
         print("Use SPACE to select/deselect drills, then press ENTER to start")
         print("")
         drill_list = extract_playable_drills(course_drills)
-        return inquirer.prompt([inquirer.Checkbox("Drills", message="Selected Drills", choices=drill_list)])["Drills"]
+        selected_drills = inquirer.prompt([inquirer.Checkbox("Drills", message="Selected Drills", choices=[("Play all drills","playAll")]+drill_list)])["Drills"]
+        if "playAll" in selected_drills:
+            print("Playing all!")
+            # Gets all ids from tuple list
+            return [drill[1] for drill in drill_list]
+        else:
+            return selected_drills
     elif [item["type"] for item in repertoire if item["id"] == play_id][0] == "DRILL":
         return play_id
     else:
