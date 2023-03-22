@@ -2,7 +2,7 @@
 ## Repertoire
 ### /api/3/repertoire
 Returns reperoire object (not to be confused with [v2 repertoire object](https://www.drillster.com/info/developers/api/2.1.1/objects/drillables) (response given by /api/2.1.1/repertoire))
-```json
+```jsonc
 {
     "playableRenditions": [
         /* list of "drillable" objects */
@@ -20,7 +20,7 @@ For more explanaition on drillable object, see [official api documentation](http
 ## Playable results
 ### /api/3/results?playable={playable}
 Returns all drills and their proficiencies in specific course
-```json
+```jsonc
 {
     "playable": /* playable object */,
     "proficiency": /* proficiency object */,
