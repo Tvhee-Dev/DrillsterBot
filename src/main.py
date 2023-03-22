@@ -57,7 +57,7 @@ def select_drills():
         else:
             return selected_drills
     elif [item["type"] for item in repertoire if item["id"] == play_id][0] == "DRILL":
-        return play_id
+        return [play_id]
     else:
         print("Cannot play tests using DrillsterBot")
         exit()
@@ -106,8 +106,16 @@ def start_drill(drill_id):
         if question_object["ask"]["term"]["value"] not in stored_wordlist:
             # Answer the question and add the question-answer pair to the dictionary
             answer_object = current_drill.answer_question(answer="")
-            stored_wordlist[question_object["ask"]["term"]["value"]] = \
-                answer_object["evaluation"]["termEvaluations"][1]["value"]
+            if question_object["tell"]["composition"] != "SET":
+                stored_wordlist[question_object["ask"]["term"]["value"]] = \
+                    answer_object["evaluation"]["termEvaluations"][1]["value"]
+            elif question_object["tell"]["composition"] == "SET":
+                correct_answers=[]
+                for ans in answer_object["evaluation"]["termEvaluations"]:
+                    if ans["value"] != '':
+                        correct_answers.append(ans["value"])
+                stored_wordlist[question_object["ask"]["term"]["value"]] = \
+                    correct_answers
         else:
             # Answer the question using the previously recorded answer from the dictionary
             answer_object = current_drill.answer_question(

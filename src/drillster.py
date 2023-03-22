@@ -35,6 +35,13 @@ class Drill:
         return question_object
 
     def answer_question(self, answer):
-        answer_response = requests.put(f"https://www.drillster.com/api/2.1.1/answer/{self.reference}",
-                                       headers=header, data={"answer": answer}).json()
+        if isinstance(answer, str):
+            answer_response = requests.put(f"https://www.drillster.com/api/2.1.1/answer/{self.reference}",
+                                        headers=header, data={"answer": answer}).json()
+        elif isinstance(answer, list):
+            data = []
+            for i in answer:
+                data.append(("answer",i))
+            answer_response = requests.put(f"https://www.drillster.com/api/2.1.1/answer/{self.reference}",
+                                        headers=header, data=data).json()
         return answer_response
