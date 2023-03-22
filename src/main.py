@@ -33,7 +33,7 @@ def start():
 
     start_drills(select_drills())
 
-
+# Show menu to select courses/drills
 def select_drills():
     repertoire = drillster.get_repertoire()
     playables = [(index["name"], index["id"]) for index in repertoire]
@@ -48,6 +48,8 @@ def select_drills():
         print("")
 
         course_drills = drillster.get_course_content(play_id)
+        print("Use SPACE to select drills, then press ENTER to start")
+        print("")
         drill_list = extract_playable_drills(course_drills)
         return inquirer.prompt([inquirer.Checkbox("Drills", message="Selected Drills", choices=drill_list)])["Drills"]
     elif [item["type"] for item in repertoire if item["id"] == play_id][0] == "DRILL":
@@ -56,7 +58,7 @@ def select_drills():
         print("Cannot play tests using DrillsterBot")
         exit()
 
-
+# Define a function to extract drills from repertoire
 def extract_playable_drills(repertoire_list):
     result = []
 
@@ -120,7 +122,7 @@ def start_drill(drill_id):
             json.dump(stored_wordlist, file_content)
 
     # Print a message indicating that the drill is completed and how long it took to complete
-    print(f"Completed {current_drill.get_name()} in {round(time.time() - start_time)} seconds")
+    print(f"Completed {current_drill.get_name()} in {round(time.time() - start_time,1)} seconds")
 
 
 def start_drills(drill_ids):
