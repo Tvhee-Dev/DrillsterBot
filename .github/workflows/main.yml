@@ -14,13 +14,13 @@ jobs:
     - name: Install Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.11' # Replace x with the version of Python you want to use
+        python-version: '3.11' 
     - name: Install dependencies
       run: pip install pyinstaller && pip install -r src/requirements.txt
     - name: Build executable
-      run: pyinstaller --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py # Replace my_script.py with the name of your script
+      run: pyinstaller --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py 
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
-        name: main.exe # Replace my_script.exe with the name you want to give to the executable file
-        path: dist/main.exe # Replace my_script.exe with the name of your script
+        name: DrillsterBot
+        path: dist/main.exe
