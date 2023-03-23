@@ -90,24 +90,35 @@ def extract_playable_drills(repertoire_list):
 
     return result
 
+def get_wordlist(drill_id):
+    if drill_id in wordlists:
+        return wordlists[drill_id]
+    else:
+        return {}
+
+def store_wordlist(drill_id, wordlist_data):
+    wordlists[drill_id] = wordlist_data
+    with open("wordlists.json", "w") as file_content:
+        json.dump(wordlists, file_content)
 
 # Define a function to play a drill given its ID
 def start_drill(drill_id):
     #proficiency = 0
     #start_time = time.time()
     drill = drillster.Drill(drill_id)
-    lock.acquire() # prevents multiple threads outputting to the same line
-    print(f"Starting {drill.get_name()}...")
-    lock.release()
     current_drills.append(drill)
 
     # Load existing dictionary of questions and answers from a file if it exists, otherwise create an empty dictionary
-    if os.path.exists(f"./wordlists/{drill_id}.json"):
-        with open(f"./wordlists/{drill_id}.json", "r") as file_content:
-            stored_wordlist = json.load(file_content)
-    else:
-        stored_wordlist = {}
+    global wordlists
+    wordlists={}
+    if os.path.exists("wordlists.json"):
+        with open("wordlists.json", "r") as file_content:
+            file_read=file_content.read()
+            if file_read != "":
+                
+                wordlists=json.loads(file_read)
 
+    stored_wordlist = get_wordlist(drill_id)
     while drill.continue_answering():
         # Get a question from the drill
         question_object = drill.get_question()
@@ -131,15 +142,12 @@ def start_drill(drill_id):
         else:
             # Answer the question using the previously recorded answer from the dictionary
             answer_object = drill.answer_question(answer=stored_wordlist[question])
-
+    	
+        lock.acquire()
         update_progressbar()
-
+        lock.release()
     # Save the updated dictionary of questions and answers to a file
-    if not os.path.exists("./wordlists/"):
-        os.mkdir("./wordlists/")
-
-    with open(f"./wordlists/{drill_id}.json", "w") as file_content:
-        json.dump(stored_wordlist,file_content)
+    store_wordlist(drill_id,stored_wordlist)
 
     #lock.acquire()
     # Print a message indicating that the drill is completed and how long it took to complete
@@ -181,23 +189,13 @@ def update_progressbar():
         # and this percentage is added to the total percentage with 1 / drill_amount
 
         # !!! vvv This crashes if start_percentage = 100 vvv !!!
-        percentage += (((drill.percentage - drill.start_percentage) / (100 - drill.start_percentage)) / drill_amount)
+        if drill.start_percentage != 100:
+            percentage += (((drill.percentage - drill.start_percentage) / (100 - drill.start_percentage))*100 / drill_amount)
+        else:
+            percentage += 100/drill_amount
 
         if drill.percentage == 100:
             completed += 1
-    
-    line = "Progress: ["
-
-    for index in range(21):
-        if (index * 5) > percentage:
-            line.join("=")
-        else:
-            line.join(" ")
-
-    line.join(f"] {round(percentage)}% ({completed} / {drill_amount} Drills completed)")
-
-    #sys.stdout.write("\r")
-    #sys.stdout.write(line)
-
-
+    progressbar_percent=max([percentage,0])
+    print(f"[{round(progressbar_percent/2)*'='+round((100-progressbar_percent)/2)*' '}] {round(percentage)}% ({completed} / {drill_amount} Drills completed)", end="\r")
 start()

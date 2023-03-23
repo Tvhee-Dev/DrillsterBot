@@ -16,8 +16,12 @@ def get_repertoire():
 
 
 def get_course_content(playable):
-    return requests.get(f"https://www.drillster.com/api/3/results?playable={playable}",
-                        headers=header).json()["results"]
+    try:
+        return requests.get(f"https://www.drillster.com/api/3/results?playable={playable}",
+                            headers=header).json()["results"]
+    except:
+        return requests.get(f"https://www.drillster.com/api/3/results?playable={playable}",
+                            headers=header).json()["results"]
 
 
 class Drill:

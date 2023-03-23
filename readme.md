@@ -8,4 +8,4 @@ If you find one, let us know!
     ![Step 2](readme/Step2.png?raw=true)
 3. Run DrillsterBot-v2.x.exe
 
-   Make sure you don't delete the "wordlists" directory, doing this will result in the bot having to re-learn all your drills
+   Make sure you don't delete the "wordlists" file, doing this will result in the bot having to re-learn all your drills
