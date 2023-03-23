@@ -5,6 +5,8 @@ import time
 import requests
 import json
 
+from requests import ConnectTimeout
+
 header = {}
 current_drills = []
 thread_lock: threading.Lock
@@ -58,6 +60,10 @@ def start_drills(drill_ids):
         percentage = update_progressbar()
         time.sleep(1)
 
+    # Save all the wordlists
+    with open("wordlists.json", "w") as file_content:
+        file_content.write(json.dumps(wordlists))
+
     # Reset the current_drills list
     current_drills = []
 
@@ -88,7 +94,9 @@ def update_progressbar():
     characters_filled = round(progressbar_percent / 2)
     characters_empty = round((100 - progressbar_percent) / 2)
 
-    print(f"[{characters_filled * '=' + characters_empty * ' '}] {round(percentage)}% ({completed} / {drill_amount} Drills completed)", end="\r")
+    print(
+        f"[{characters_filled * '=' + characters_empty * ' '}] {round(percentage)}% ({completed} / {drill_amount} Drills completed)",
+        end="\r")
 
     return percentage
 
@@ -122,7 +130,7 @@ class Drill:
                 answer_object = self.answer_question(answer=wordlist[question])
 
             # First set the answer, after setting check if the answer is correct - Drills could change
-            if answer_object["evaluation"] == "INCORRECT":
+            if answer_object["evaluation"]["result"] == "INCORRECT":
                 # Get all the possible answers
                 correct_answers = answer_object["evaluation"]["termEvaluations"]
 
@@ -141,12 +149,18 @@ class Drill:
 
                     wordlist[question] = correct_answers
 
-    def get_question(self):
-        question = requests.get(f"https://www.drillster.com/api/2.1.1/question/{self.id}", headers=header).json()
-        question_object = question["question"]
-        self.reference = question_object["reference"]
+        wordlists[self.id] = wordlist
 
-        return question_object
+    def get_question(self):
+        try:
+            question = requests.get(f"https://www.drillster.com/api/2.1.1/question/{self.id}", headers=header).json()
+            question_object = question["question"]
+            self.reference = question_object["reference"]
+
+            return question_object
+        except ConnectTimeout:
+            time.sleep(1)
+            return self.get_question()
 
     def answer_question(self, answer):
         answer_response: json
@@ -160,11 +174,15 @@ class Drill:
             for index in answer:
                 send_question_data.append(("answer", index))
 
-        answer_response = requests.put(f"https://www.drillster.com/api/2.1.1/answer/{self.reference}",
-                                       headers=header, data=send_question_data).json()
-        self.percentage = answer_response["proficiency"]["overall"]
+        try:
+            answer_response = requests.put(f"https://www.drillster.com/api/2.1.1/answer/{self.reference}",
+                                           headers=header, data=send_question_data).json()
+            self.percentage = answer_response["proficiency"]["overall"]
 
-        if self.start_percentage == -1:
-            self.start_percentage = self.percentage
+            if self.start_percentage == -1:
+                self.start_percentage = self.percentage
 
-        return answer_response
+            return answer_response
+        except ConnectTimeout:
+            time.sleep(1)
+            return self.answer_question(answer)
