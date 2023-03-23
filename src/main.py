@@ -49,7 +49,7 @@ def auto_update():
 
     if latest_release != current_version:
         download_url = response.json()[0]["assets"][0]["browser_download_url"]
-        filename = os.path.join(os.getcwd(), f"main.exe")
+        filename = os.path.join(os.getcwd(), f"DrillsterBot-v{latest_release}.exe")
         download_link_response = requests.get(download_url)
 
         with open(filename, "wb") as file:
@@ -57,7 +57,7 @@ def auto_update():
 
         print("Finished downloading update: ", filename)
         os.system(f'move DrillsterBot-v{current_version}.exe ' + r'%localappdata%\temp')
-        os.system(f'DrillsterBot-v{latest_release}')
+        os.system(f'DrillsterBot-v{latest_release}.exe')
         return True
 
     return False
