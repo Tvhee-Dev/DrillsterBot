@@ -32,8 +32,8 @@ jobs:
       with:
         name: DrillsterBot
         path: ./
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: DrillsterBot-${GITHUB_REF##*/}.exe
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: DrillsterBot-${GITHUB_REF##*/}.exe
       
