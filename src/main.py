@@ -106,9 +106,6 @@ def start_drill(drill_id):
     #proficiency = 0
     #start_time = time.time()
     drill = drillster.Drill(drill_id)
-    lock.acquire() # prevents multiple threads outputting to the same line
-    print(f"Starting {drill.get_name()}...")
-    lock.release()
     current_drills.append(drill)
 
     # Load existing dictionary of questions and answers from a file if it exists, otherwise create an empty dictionary
@@ -116,8 +113,10 @@ def start_drill(drill_id):
     wordlists={}
     if os.path.exists("wordlists.json"):
         with open("wordlists.json", "r") as file_content:
-            if file_content.read() != "":
-                wordlists=json.load(file_content)
+            file_read=file_content.read()
+            if file_read != "":
+                
+                wordlists=json.loads(file_read)
 
     stored_wordlist = get_wordlist(drill_id)
     while drill.continue_answering():
