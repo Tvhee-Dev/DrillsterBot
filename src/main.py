@@ -6,7 +6,7 @@ import requests
 import drillster
 import browser_cookie3
 
-current_version = "2.0.0"
+current_version = "v2.0.0"
 
 
 def start():
