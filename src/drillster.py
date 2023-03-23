@@ -38,14 +38,18 @@ class Drill:
         return question_object
 
     def answer_question(self, answer):
-        answer_response = requests.put(f"https://www.drillster.com/api/2.1.1/answer/{self.reference}",
-                                       headers=header, data={"answer": answer}).json()
-
-        percentage = answer_response["proficiency"]["overall"]
-
+        if isinstance(answer, str):
+            answer_response = requests.put(f"https://www.drillster.com/api/2.1.1/answer/{self.reference}",
+                                        headers=header, data={"answer": answer}).json()
+        elif isinstance(answer, list):
+            data = []
+            for i in answer:
+                data.append(("answer",i))
+            answer_response = requests.put(f"https://www.drillster.com/api/2.1.1/answer/{self.reference}",
+                                        headers=header, data=data).json()
+        self.percentage = answer_response["proficiency"]["overall"]
         if self.start_percentage == -1:
-            self.start_percentage = percentage
-
+            self.start_percentage = self.percentage
         return answer_response
 
     def continue_answering(self):
