@@ -14,7 +14,6 @@ wordlists = {}
 def set_token(drillster_token):
     global header
     header = {"Authorization": f"Bearer {drillster_token}"}
-    return
 
 
 def get_repertoire():

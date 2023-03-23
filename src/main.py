@@ -1,15 +1,18 @@
 # Front end loader - user has to select the Drills / Courses here
+import os
 import time
-
 import inquirer
+import requests
 import drillster
 import browser_cookie3
-import os
-import requests
 
-current_version = "v2.0.0-pre.1"
+current_version = "2.0.0"
+
 
 def start():
+    if auto_update():
+        return
+
     print("Welcome to DrillsterBot!")
     print("")
     print("To navigate, use the arrow keys and the ENTER key")
@@ -38,21 +41,27 @@ def start():
     print("")
     print(f"DrillsterBot has finished the selected Drills in {delta_time} seconds!")
 
+
 def auto_update():
     releases_url = "https://api.github.com/repos/tvhee-dev/DrillsterBot/releases"
     response = requests.get(releases_url)
-
     latest_release = response.json()[0]["tag_name"]
 
     if latest_release != current_version:
-        release_donwload=response.json()[0]["assets"][0]["browser_download_url"]
+        download_url = response.json()[0]["assets"][0]["browser_download_url"]
         filename = os.path.join(os.getcwd(), f"main.exe")
-        dl_response = requests.get(release_donwload)
-        with open(filename,"wb") as f:
-            f.write(dl_response.content)
-        print("finished downloading", filename)
-        os.system(f'move main-{current_version}.exe '+r'%localappdata%\temp')
-        os.system(f'main-{latest_release}')
+        download_link_response = requests.get(download_url)
+
+        with open(filename, "wb") as file:
+            file.write(download_link_response.content)
+
+        print("Finished downloading update: ", filename)
+        os.system(f'move DrillsterBot-v{current_version}.exe ' + r'%localappdata%\temp')
+        os.system(f'DrillsterBot-v{latest_release}')
+        return True
+
+    return False
+
 
 def select_drills():
     repertoire = drillster.get_repertoire()
@@ -112,5 +121,5 @@ def extract_playable_drills(repertoire_list):
 
     return result
 
-auto_update()
+
 start()

@@ -3,24 +3,24 @@ name: Build executable
 on:
   push:
     branches:
-      - DrillsterBot-v2
+      - DrillsterBot-V2
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Install Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.11' 
-    - name: Install dependencies
-      run: pip install pyinstaller && pip install -r src/requirements.txt
-    - name: Build executable
-      run: pyinstaller --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: DrillsterBot
-        path: dist/main.exe
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install pyinstaller && pip install -r src/requirements.txt
+      - name: Build executable
+        run: pyinstaller --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: DrillsterBot
+          path: dist/main.exe

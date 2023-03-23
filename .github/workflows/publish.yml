@@ -1,0 +1,23 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: publish.yml
+          path: ./
+      - name: Rename main.exe
+        run: cp main.exe DrillsterBot-${GITHUB_REF##*/}.exe
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: DrillsterBot-${GITHUB_REF##*/}.exe
