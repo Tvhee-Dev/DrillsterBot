@@ -37,4 +37,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: DrillsterBot-${GITHUB_REF##*/}.exe
+      - name: Done
+        run: echo Done
       
