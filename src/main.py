@@ -1,7 +1,6 @@
 # Front end loader - user has to select the Drills / Courses here
 import os
 import time
-from pathlib import Path
 
 import inquirer
 import requests
@@ -16,9 +15,6 @@ current_version = "v2.0.1"
 def start():
     if auto_update():
         return
-
-    if Path("DrillsterBot-v2.0.0.exe").is_file():
-        os.system(f'move DrillsterBot-v2.0.0.exe ' + r'"%localappdata%\temp"')
 
     print("Welcome to DrillsterBot!")
     print("")
