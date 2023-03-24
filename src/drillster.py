@@ -1,4 +1,5 @@
 # Drill thread manager - manages all the current Drillster threads and updates the progress bar
+import math
 import os
 import threading
 import time
@@ -46,7 +47,7 @@ def start_drills(drill_ids):
                 wordlists = json.loads(file_read)
 
     # Create threads for each drill and start them
-
+    start_time = time.time()
     thread_lock = threading.Lock()
 
     for drill_id in drill_ids:
@@ -57,7 +58,7 @@ def start_drills(drill_ids):
     percentage = 0
 
     while percentage < 100:
-        percentage = update_progressbar()
+        percentage = update_progressbar(start_time)
         time.sleep(1)
 
     # Save all the wordlists
@@ -68,7 +69,7 @@ def start_drills(drill_ids):
     current_drills = []
 
 
-def update_progressbar():
+def update_progressbar(start_time):
     drill_amount = len(current_drills)
     percentage = 0
     completed = 0
@@ -94,8 +95,12 @@ def update_progressbar():
     characters_filled = round(progressbar_percent / 2)
     characters_empty = round((100 - progressbar_percent) / 2)
 
+    delta_time = round(time.time() - start_time)
+    minutes = math.floor(delta_time / 60)
+    seconds = delta_time - (minutes * 60)
+
     print(
-        f"[{characters_filled * '=' + characters_empty * ' '}] {round(percentage)}% ({completed} / {drill_amount} Drills completed)",
+        f"[{characters_filled * '=' + characters_empty * ' '}] {round(progressbar_percent)}% ({completed} / {drill_amount} completed) in {str(minutes).zfill(2)}:{str(seconds).zfill(2)} ",
         end="\r")
 
     return percentage
@@ -119,15 +124,16 @@ class Drill:
             # Get a question from the drill
             question_object = self.get_question()
             question = question_object["ask"]["term"]["value"]
+            column = question_object["tell"]["name"]
             answer_object: json
 
             # Check if the question is already in the dictionary of questions and answers
-            if question not in wordlist:
+            if (question not in wordlist) or (column not in wordlist[question]):
                 # Answer the question and add the question-answer pair to the dictionary
                 answer_object = self.answer_question(answer="")
             else:
                 # Answer the question using the previously recorded answer from the dictionary
-                answer_object = self.answer_question(answer=wordlist[question])
+                answer_object = self.answer_question(answer=wordlist[question][column])
 
             # First set the answer, after setting check if the answer is correct - Drills could change
             if answer_object["evaluation"]["result"] == "INCORRECT":
@@ -137,17 +143,21 @@ class Drill:
                 # Check for multiple answers - store them all
                 if question_object["tell"]["composition"] != "SET":
                     # Store the only correct answer
-                    wordlist[question] = correct_answers[1]["value"]
-
+                    store_answer = correct_answers[1]["value"]
                 else:
-                    correct_answers = []
+                    store_answer = []
 
                     # Store all possible answers
                     for answer in correct_answers:
                         if answer["value"] != "":
-                            correct_answers.append(answer["value"])
+                            store_answer.append(answer["value"])
 
-                    wordlist[question] = correct_answers
+                    store_answer = correct_answers
+
+                if question not in wordlist:
+                    wordlist[question] = {}
+
+                wordlist[question][column] = store_answer
 
         wordlists[self.id] = wordlist
 
@@ -156,7 +166,6 @@ class Drill:
             question = requests.get(f"https://www.drillster.com/api/2.1.1/question/{self.id}", headers=header).json()
             question_object = question["question"]
             self.reference = question_object["reference"]
-
             return question_object
         except ConnectTimeout:
             time.sleep(1)
