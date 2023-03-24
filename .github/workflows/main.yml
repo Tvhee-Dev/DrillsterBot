@@ -2,8 +2,8 @@ name: Build executable
 
 on:
   push:
-    branches:
-      - DrillsterBot-V2
+    tags:
+      - "v*.*.*"
 
 jobs:
   build:
@@ -18,9 +18,28 @@ jobs:
       - name: Install dependencies
         run: pip install pyinstaller && pip install -r src/requirements.txt
       - name: Build executable
-        run: pyinstaller --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py
+        run: pyinstaller --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py -n DrillsterBot.exe
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: DrillsterBot
-          path: dist/main.exe
+          path: dist/DrillsterBot.exe
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: DrillsterBot
+          path: ./
+      - name: rename exe
+        run: |
+          mv DrillsterBot.exe Drillsterbot-${{  github.ref_name }}.exe
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Drillsterbot-${{  github.ref_name }}.exe
+      - name: Done
+        run: echo Done
+      
