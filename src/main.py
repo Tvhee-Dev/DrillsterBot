@@ -1,6 +1,8 @@
 # Front end loader - user has to select the Drills / Courses here
 import os
 import time
+from pathlib import Path
+
 import inquirer
 import requests
 import drillster
@@ -8,12 +10,15 @@ import browser_cookie3
 import sys
 import platform
 
-current_version = "v2.0.0"
+current_version = "v2.0.1"
 
 
 def start():
     if auto_update():
         return
+
+    if Path("DrillsterBot-v2.0.0.exe").is_file():
+        os.system(f'move DrillsterBot-v2.0.0.exe ' + r'"%localappdata%\temp"')
 
     print("Welcome to DrillsterBot!")
     print("")
@@ -54,6 +59,7 @@ def auto_update():
     latest_release = response.json()[0]["tag_name"]
 
     if latest_release != current_version:
+        print("Updating DrillsterBot...")
         download_url = response.json()[0]["assets"][0]["browser_download_url"]
         filename = os.path.join(os.getcwd(), f"DrillsterBot-{latest_release}.exe")
         download_link_response = requests.get(download_url)
@@ -62,8 +68,8 @@ def auto_update():
             file.write(download_link_response.content)
 
         print("Finished downloading update: ", filename)
-        os.system(f'move DrillsterBot-{current_version}.exe ' + r'%localappdata%\temp')
-        os.system(f'DrillsterBot-{latest_release}.exe')
+        os.system(f'move DrillsterBot-{current_version}.exe ' + r'"%localappdata%\temp"')
+        os.system(f"DrillsterBot-{latest_release}.exe")
         return True
 
     return False
