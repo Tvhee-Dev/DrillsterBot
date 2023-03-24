@@ -5,9 +5,18 @@ import inquirer
 import requests
 import drillster
 import browser_cookie3
+import sys
+import platform
 
 current_version = "v2.0.0"
 
+def pause(message="Press any key to exit..."):
+    if platform.system() == "Windows":
+        os.system(f"echo {message}")
+        os.system("pause >nul")
+    else:
+        os.system(f"/bin/bash -c 'read -s -n 1 -p \"{message}\"'")
+    sys.exit()
 
 def start():
     if auto_update():
@@ -31,8 +40,7 @@ def start():
             set_token = True
 
     if set_token is False:
-        print("No token found! Please login to Drillster on any webbrowser and keep the tab open!")
-        exit()
+        pause("No token found! Please login to Drillster on any webbrowser and keep the tab open!")
 
     start_time = time.time()
     drillster.start_drills(select_drills())
@@ -70,7 +78,7 @@ def select_drills():
     play_id = inquirer.prompt([inquirer.List("Playable", message="Selected playable", choices=playables)])["Playable"]
 
     if play_id == "-1":
-        exit()
+        sys.exit()
 
     if [item["type"] for item in repertoire if item["id"] == play_id][0] == "COURSE":
         print("Loading course...")
@@ -97,8 +105,7 @@ def select_drills():
         return [play_id]
 
     else:
-        print("Cannot play tests using DrillsterBot")
-        exit()
+        pause("Cannot play tests using DrillsterBot")
 
 
 # Define a function to extract drills from repertoire
@@ -123,3 +130,4 @@ def extract_playable_drills(repertoire_list):
 
 
 start()
+pause()
