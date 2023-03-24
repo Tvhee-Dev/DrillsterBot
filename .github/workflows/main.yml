@@ -3,7 +3,7 @@ name: Build executable
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v2.*.*"
 
 jobs:
   build:
@@ -35,11 +35,11 @@ jobs:
           path: ./
       - name: rename exe
         run: |
-          mv DrillsterBot.exe Drillsterbot-${{  github.ref_name }}.exe
+          mv DrillsterBot.exe DrillsterBot-${{  github.ref_name }}.exe
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: Drillsterbot-${{  github.ref_name }}.exe
+          files: DrillsterBot-${{  github.ref_name }}.exe
       - name: Done
         run: echo Done
       
