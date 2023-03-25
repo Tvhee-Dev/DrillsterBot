@@ -1,11 +1,12 @@
 # DrillsterBot V2
-Status: **Production** - geef bugs wel door a.u.b.
+Status: **Production** - please report any bugs you find!
 
-Perfect voor als je geen zin meer hebt in Drillster en je je woorden op een andere manier wilt leren.
+Perfect if you don't feel like learning your words via Drillster.
 
-[Klik hier voor de wiki](../../wiki)
+[Click here for the wiki](../../wiki)
 
-## Waarom zou je het gebruiken? Het is gemakkelijk in gebruik! DrillsterBot ...
-1. maakt alle Drills die jij wil! Zelfs een hele "Course" is geen probleem.
-2. is easy to use: DrillsterBot heeft een handige command line interface.
-3. slaat alle woorden automatisch op.
+## Why would you use it? Because DrillsterBot ...
+1. makes all Drills you want! Even a full "Course" is not a problem.
+2. is easy to use: DrillsterBot does have a command line interface.
+3. automatically saves all words.
+4. is incredibly fast. It completes a set of 20 Drills in 1 minute from 0% to 100%.
