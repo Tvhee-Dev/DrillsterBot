@@ -1,6 +1,7 @@
 # Front end loader - user has to select the Drills / Courses here
 import os
 import time
+
 import inquirer
 import requests
 import drillster
@@ -8,15 +9,8 @@ import browser_cookie3
 import sys
 import platform
 
-current_version = "v2.0.0"
+current_version = "v2.0.1"
 
-def pause(message="Press any key to exit..."):
-    if platform.system() == "Windows":
-        os.system(f"echo {message}")
-        os.system("pause >nul")
-    else:
-        os.system(f"/bin/bash -c 'read -s -n 1 -p \"{message}\"'")
-    sys.exit()
 
 def start():
     if auto_update():
@@ -40,10 +34,15 @@ def start():
             set_token = True
 
     if set_token is False:
-        pause("No token found! Please login to Drillster on any webbrowser and keep the tab open!")
+        pause("No token found! Please login to Drillster on a browser and keep the tab open! Press any key to exit...")
 
     start_time = time.time()
-    drillster.start_drills(select_drills())
+    selected_drills = select_drills()
+
+    if isinstance(selected_drills, list) and len(selected_drills) == 0:
+        pause("You did not select any Drills! Press any key to exit...")
+
+    drillster.start_drills(selected_drills)
     delta_time = round(time.time() - start_time)
 
     print("")
@@ -56,6 +55,7 @@ def auto_update():
     latest_release = response.json()[0]["tag_name"]
 
     if latest_release != current_version:
+        print("Updating DrillsterBot...")
         download_url = response.json()[0]["assets"][0]["browser_download_url"]
         filename = os.path.join(os.getcwd(), f"DrillsterBot-{latest_release}.exe")
         download_link_response = requests.get(download_url)
@@ -64,8 +64,8 @@ def auto_update():
             file.write(download_link_response.content)
 
         print("Finished downloading update: ", filename)
-        os.system(f'move DrillsterBot-{current_version}.exe ' + r'%localappdata%\temp')
-        os.system(f'DrillsterBot-{latest_release}.exe')
+        os.system(f'move DrillsterBot-{current_version}.exe ' + r'"%localappdata%\temp"')
+        os.system(f"DrillsterBot-{latest_release}.exe")
         return True
 
     return False
@@ -127,6 +127,15 @@ def extract_playable_drills(repertoire_list):
             result.extend(extract_playable_drills(item))
 
     return result
+
+
+def pause(message="Press any key to exit..."):
+    if platform.system() == "Windows":
+        os.system(f"echo {message}")
+        os.system("pause >nul")
+    else:
+        os.system(f"/bin/bash -c 'read -s -n 1 -p \"{message}\"'")
+    sys.exit()
 
 
 start()
