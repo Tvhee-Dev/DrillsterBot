@@ -1,4 +1,5 @@
 # DrillsterBot V2
+<img align="right" src="src/icon.ico">
 Status: **Production** - please report any bugs you find!
 
 Perfect if you don't feel like learning your words via Drillster.
