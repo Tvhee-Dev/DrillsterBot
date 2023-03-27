@@ -36,12 +36,12 @@ def start():
     if set_token is False:
         pause("No token found! Please login to Drillster on a browser and keep the tab open! Press any key to exit...")
 
-    start_time = time.time()
     selected_drills = select_drills()
 
     if isinstance(selected_drills, list) and len(selected_drills) == 0:
         pause("You did not select any Drills! Press any key to exit...")
 
+    start_time = time.time()
     drillster.start_drills(selected_drills)
     delta_time = round(time.time() - start_time)
 
