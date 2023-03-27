@@ -18,7 +18,7 @@ jobs:
       - name: Install dependencies
         run: pip install pyinstaller && pip install -r src/requirements.txt
       - name: Build executable
-        run: pyinstaller --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py -n DrillsterBot.exe
+        run: pyinstaller -i src/icon.ico --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py -n DrillsterBot.exe
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
