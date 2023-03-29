@@ -9,7 +9,7 @@ import browser_cookie3
 import sys
 import platform
 
-current_version = "v2.0.1"
+current_version = "v2.0.2"
 
 
 def start():
