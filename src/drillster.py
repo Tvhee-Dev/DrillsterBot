@@ -45,20 +45,28 @@ def start_drills(drill_ids):
 
             if file_read != "":
                 wordlists = json.loads(file_read)
-
+            
+        if type(list(next(iter(wordlists.values())).values())[0]) == str:
+            os.remove("wordlists.json")
+            start_drills(drill_ids)
+            return
+    else:
+        wordlists = {}
     # Create threads for each drill and start them
     start_time = time.time()
     thread_lock = threading.Lock()
 
-    for drill_id in drill_ids:
-        drill = Drill(drill_id)
-        current_drills.append(drill)
-
     # Update the percentage bar every second
     percentage = 0
 
+    for drill_id in drill_ids:
+        drill = Drill(drill_id)
+        current_drills.append(drill)
+        percentage = update_progressbar(start_time, len(drill_ids))
+
+
     while percentage < 100:
-        percentage = update_progressbar(start_time)
+        percentage = update_progressbar(start_time, len(drill_ids))
         time.sleep(1)
 
     # Save all the wordlists
@@ -69,8 +77,7 @@ def start_drills(drill_ids):
     current_drills = []
 
 
-def update_progressbar(start_time):
-    drill_amount = len(current_drills)
+def update_progressbar(start_time, drill_amount):
     percentage = 0
     completed = 0
 
