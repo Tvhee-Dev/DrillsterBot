@@ -18,12 +18,12 @@ jobs:
       - name: Install dependencies
         run: pip install pyinstaller && pip install -r src/requirements.txt
       - name: Build executable
-        run: pyinstaller -i src/icon.ico --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py -n DrillsterBot.exe
+        run: pyinstaller -i src/icon.ico --hidden-import=jinxed.terminfo.vtwin10 --onefile src/main.py -n me.tvhee.drillsterbot.DrillsterBot.exe
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: DrillsterBot
-          path: dist/DrillsterBot.exe
+          name: me.tvhee.drillsterbot.DrillsterBot
+          path: dist/me.tvhee.drillsterbot.DrillsterBot.exe
   release:
     runs-on: ubuntu-latest
     needs: build
@@ -31,7 +31,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v2
         with:
-          name: DrillsterBot
+          name: me.tvhee.drillsterbot.DrillsterBot
           path: ./
       - name: rename exe
         run: |
@@ -39,7 +39,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: DrillsterBot-${{  github.ref_name }}.exe
+          files: me.tvhee.drillsterbot.DrillsterBot-${{  github.ref_name }}.exe
       - name: Done
         run: echo Done
       
