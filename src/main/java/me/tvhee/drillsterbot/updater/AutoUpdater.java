@@ -38,15 +38,14 @@ public class AutoUpdater
             String path = AutoUpdater.class.getProtectionDomain().getCodeSource().getLocation().getPath();
             String decodedPath = URLDecoder.decode(path, "utf-8");
             File thisJarFile = new File(decodedPath);
-            File destination = new File(thisJarFile.getParentFile(), "DrillsterBot " + latestVersion + ".jar");
+            File destination = new File(thisJarFile.getParentFile(), "DrillsterBot-" + latestVersion + ".jar");
             FileOutputStream output = new FileOutputStream(destination);
             
             output.getChannel().transferFrom(channel, 0, Long.MAX_VALUE);
             output.flush();
             output.close();
             
-            Runtime.getRuntime().exec("java -jar \"" + destination.getAbsolutePath() + "\"");
-            thisJarFile.deleteOnExit();
+            Runtime.getRuntime().exec("java -jar \"" + destination.getAbsolutePath() + "\" -" + "\"" + thisJarFile + "\"");
             return true;
         }
         catch(Exception e)

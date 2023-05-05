@@ -5,6 +5,8 @@ import me.tvhee.drillsterbot.gui.LoginScreen;
 import me.tvhee.drillsterbot.gui.DrillsterBotGUI;
 import me.tvhee.drillsterbot.updater.AutoUpdater;
 
+import java.io.File;
+
 public class DrillsterBot
 {
     private static final Wordlist wordlist = new Wordlist();
@@ -12,6 +14,13 @@ public class DrillsterBot
     
     public static void main(String[] args)
     {
+        //args[0] = Argument of old program file after update
+        if(args.length > 0)
+        {
+            File oldProgram = new File(args[0].substring(1));
+            oldProgram.delete();
+        }
+        
         if(AutoUpdater.checkForUpdates())
             System.exit(0); //Update available, shutdown this instance
         
