@@ -63,7 +63,7 @@ public class DrillsterBotGUI
             List<Image> icons = new ArrayList<>();
             
             for(String size : new String[]{"16", "32", "64", "128"})
-                icons.add(ImageIO.read(new FileInputStream("src/main/resources/icon-" + size + ".png")));
+                icons.add(ImageIO.read(getClass().getClassLoader().getResource("icon-" + size + ".png")));
             
             this.frame.setResizable(false);
             this.frame.setIconImages(icons);

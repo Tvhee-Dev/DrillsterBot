@@ -40,7 +40,7 @@ public class LoginScreen implements SimpleScreen
             this.welcomeLabel = new JLabel("Welcome to DrillsterBot!");
             this.welcomeLabel.setFont(new Font(null, Font.PLAIN, 18));
             
-            Image image = ImageIO.read(new FileInputStream("src/main/resources/icon-128.png"));
+            Image image = ImageIO.read(getClass().getClassLoader().getResource("icon-128.png"));
             this.imageLabel = new JLabel(new ImageIcon(image));
             
             this.browserButton = new JButton("Open Browser");

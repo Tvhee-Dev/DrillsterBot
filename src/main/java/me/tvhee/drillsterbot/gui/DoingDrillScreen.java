@@ -57,7 +57,7 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
             this.titleLabel = new JLabel("Doing Drillster...");
             this.titleLabel.setFont(new Font(null, Font.PLAIN, 18));
             
-            Image image = ImageIO.read(new FileInputStream("src/main/resources/icon-128.png"));
+            Image image = ImageIO.read(getClass().getClassLoader().getResource("icon-128.png"));
             JLabel imageLabel = new JLabel(new ImageIcon(image));
             
             this.progressbar = new JProgressBar(0, 100);
