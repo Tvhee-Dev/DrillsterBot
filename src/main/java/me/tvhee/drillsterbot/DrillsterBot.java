@@ -3,6 +3,7 @@ package me.tvhee.drillsterbot;
 import me.tvhee.drillsterbot.drill.Wordlist;
 import me.tvhee.drillsterbot.gui.LoginScreen;
 import me.tvhee.drillsterbot.gui.DrillsterBotGUI;
+import me.tvhee.drillsterbot.updater.AutoUpdater;
 
 public class DrillsterBot
 {
@@ -11,6 +12,9 @@ public class DrillsterBot
     
     public static void main(String[] args)
     {
+        if(AutoUpdater.checkForUpdates())
+            System.exit(0); //Update available, shutdown this instance
+        
         wordlist.createIfNotExists();
         wordlist.readFile();
         
