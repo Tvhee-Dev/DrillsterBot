@@ -1,7 +1,6 @@
 package me.tvhee.drillsterbot.gui;
 
 import javax.imageio.ImageIO;
-import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -16,7 +15,6 @@ import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -54,7 +52,6 @@ public class LoginScreen implements SimpleScreen
             JPanel panel = new JPanel(new GridBagLayout());
             
             panel.setOpaque(true);
-            panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 10, 30));
             panel.add(this.welcomeLabel, new GridCell(0, 0).setSize(1000, 1).toConstraints());
             panel.add(this.imageLabel, new GridCell(0, 1).setSize(1000, 1).toConstraints());
             panel.add(this.browserButton, new GridCell(0, 2).setInsets(10).toConstraints());

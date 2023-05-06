@@ -2,6 +2,8 @@ package me.tvhee.drillsterbot.updater;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import me.tvhee.drillsterbot.gui.DrillsterBotGUI;
+import me.tvhee.drillsterbot.gui.UpdatingGUI;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -17,7 +19,7 @@ public class AutoUpdater
 {
     private static final String CURRENT_VERSION = "v3.0.0";
     
-    public static boolean checkForUpdates()
+    public static boolean checkForUpdates(DrillsterBotGUI gui)
     {
         try
         {
@@ -28,8 +30,10 @@ public class AutoUpdater
             JsonObject response = JsonParser.parseReader(reader).getAsJsonArray().get(0).getAsJsonObject();
             String latestVersion = response.get("tag_name").getAsString();
             
-            if(latestVersion.equals(CURRENT_VERSION))
+            if(latestVersion.equals(CURRENT_VERSION) || !latestVersion.startsWith("v3"))
                 return false; //No update available
+            
+            gui.switchScreen(new UpdatingGUI());
             
             String downloadLink = response.get("assets").getAsJsonArray().get(0).getAsJsonObject().get("browser_download_url").getAsString();
             connection = (HttpURLConnection) new URL(downloadLink).openConnection();
