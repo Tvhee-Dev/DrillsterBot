@@ -14,7 +14,6 @@ public class DrillsterBot
     
     public static void main(String[] args)
     {
-        DrillsterBotGUI gui = new DrillsterBotGUI();
         //args[0] = Argument of old program file after update
         if(args.length > 0)
         {
@@ -22,7 +21,7 @@ public class DrillsterBot
             oldProgram.delete();
         }
         
-        if(AutoUpdater.checkForUpdates(gui))
+        if(AutoUpdater.checkForUpdates())
         {
             System.exit(0); //Update available, shutdown this
             return;
@@ -31,6 +30,7 @@ public class DrillsterBot
         wordlist.createIfNotExists();
         wordlist.readFile();
         
+        DrillsterBotGUI gui = new DrillsterBotGUI();
         gui.switchScreen(new LoginScreen());
     }
     
