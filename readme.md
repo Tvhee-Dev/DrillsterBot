@@ -5,6 +5,8 @@ Status: **Production** - please report any bugs you find!
 Make sure to download and install Java to be able to run.
 
 If you do not yet have access to Java, please make sure to download it [here](https://www.java.com/nl/download/manual.jsp).
+For windows, you can click on "Windows Online" and follow the instructions to install Java.
+If you need help, please seek contact on Discord under Tvhee#4828.
 
 Perfect if you don't feel like learning your words via Drillster.
 
