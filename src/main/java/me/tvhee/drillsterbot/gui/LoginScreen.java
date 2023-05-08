@@ -23,10 +23,6 @@ import java.util.Set;
 public class LoginScreen implements SimpleScreen
 {
     private DrillsterBotGUI gui;
-    private JLabel welcomeLabel;
-    private JLabel imageLabel;
-    private JButton browserButton;
-    private JButton loginButton;
     
     @Override
     public JPanel create(DrillsterBotGUI gui)
@@ -35,27 +31,32 @@ public class LoginScreen implements SimpleScreen
         
         try
         {
-            this.welcomeLabel = new JLabel("Welcome to DrillsterBot!");
-            this.welcomeLabel.setFont(new Font(null, Font.PLAIN, 18));
+            JLabel welcomeLabel = new JLabel("Welcome to DrillsterBot!");
+            welcomeLabel.setFont(new Font(null, Font.PLAIN, 18));
             
             Image image = ImageIO.read(getClass().getClassLoader().getResource("icon-128.png"));
-            this.imageLabel = new JLabel(new ImageIcon(image));
+            JLabel imageLabel = new JLabel(new ImageIcon(image));
             
-            this.browserButton = new JButton("Open Browser");
-            this.browserButton.setFont(new Font(null, Font.PLAIN, 18));
-            this.browserButton.addActionListener(this::browseButtonAction);
+            JButton browserButton = new JButton("Open Browser");
+            browserButton.setFont(new Font(null, Font.PLAIN, 18));
+            browserButton.addActionListener(this::browseButtonAction);
             
-            this.loginButton = new JButton("Check Login");
-            this.loginButton.setFont(new Font(null, Font.PLAIN, 18));
-            this.loginButton.addActionListener(this::loginButtonAction);
+            JButton loginButton = new JButton("Check Login");
+            loginButton.setFont(new Font(null, Font.PLAIN, 18));
+            loginButton.addActionListener(this::loginButtonAction);
+            
+            JButton tokenInputButton = new JButton("Token Input");
+            tokenInputButton.setFont(new Font(null, Font.PLAIN, 18));
+            tokenInputButton.addActionListener(this::inputButtonAction);
             
             JPanel panel = new JPanel(new GridBagLayout());
             
             panel.setOpaque(true);
-            panel.add(this.welcomeLabel, new GridCell(0, 0).setSize(1000, 1).toConstraints());
-            panel.add(this.imageLabel, new GridCell(0, 1).setSize(1000, 1).toConstraints());
-            panel.add(this.browserButton, new GridCell(0, 2).setInsets(10).toConstraints());
-            panel.add(this.loginButton, new GridCell(1, 2).setInsets(10).toConstraints());
+            panel.add(welcomeLabel, new GridCell(0, 0).setSize(1000, 1).toConstraints());
+            panel.add(imageLabel, new GridCell(0, 1).setSize(1000, 1).toConstraints());
+            panel.add(browserButton, new GridCell(0, 2).setInsets(10).toConstraints());
+            panel.add(loginButton, new GridCell(1, 2).setInsets(10).toConstraints());
+            panel.add(tokenInputButton, new GridCell(2, 2).setInsets(10).toConstraints());
             
             return panel;
         }
@@ -105,5 +106,14 @@ public class LoginScreen implements SimpleScreen
         
         this.gui.showMessage("Cannot find login token, are you logged in? If so, please wait about 15 seconds before trying again.",
                 "No token found!", Icon.ERROR_MESSAGE);
+    }
+    
+    private void inputButtonAction(ActionEvent e)
+    {
+        String token = this.gui.getInput("Please put in your token!");
+        DrillsterAPI drillsterAPI = new DrillsterAPI(token);
+        
+        DrillsterBot.setDrillsterAPI(drillsterAPI);
+        this.gui.switchScreen(new RepertoireScreen());
     }
 }

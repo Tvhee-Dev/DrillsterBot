@@ -4,9 +4,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
-import javax.swing.JOptionPane;
 import me.tvhee.drillsterbot.drill.Drillable;
 import me.tvhee.drillsterbot.drill.Playable;
+import me.tvhee.drillsterbot.gui.Icon;
 import me.tvhee.drillsterbot.run.Answer;
 import me.tvhee.drillsterbot.run.Question;
 
@@ -25,7 +25,7 @@ import java.util.function.Function;
 
 public class DrillsterAPI
 {
-    private final String token;
+    private String token;
     
     public DrillsterAPI(String token)
     {
@@ -186,8 +186,17 @@ public class DrillsterAPI
             
             if(connection.getResponseCode() == 401)
             {
-                JOptionPane.showMessageDialog(null, "Failed to authenticate", "Could not authenticate to drillster.com. Are you still logged in?", JOptionPane.ERROR_MESSAGE);
-                System.exit(0);
+                String option = DrillsterBot.getGUI().getOption("Invalid token! Please put a valid token or close the application", "Invalid token", Icon.ERROR_MESSAGE, new String[] {"Input", "Close"});
+                
+                if(option.equals("Input"))
+                {
+                    this.token = DrillsterBot.getGUI().getInput("Please put in your token:");
+                    return sendRequest(request, connectionEditor);
+                }
+                else
+                {
+                    System.exit(0);
+                }
             }
             
             BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));

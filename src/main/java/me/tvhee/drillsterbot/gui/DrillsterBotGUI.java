@@ -9,7 +9,6 @@ import javax.swing.UIManager;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Image;
-import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +26,21 @@ public class DrillsterBotGUI
     public void showMessage(String message, String title, Icon icon)
     {
         JOptionPane.showMessageDialog(lastScreen, message, title, icon.getCode());
+    }
+    
+    public String getInput(String message)
+    {
+        return JOptionPane.showInputDialog(lastScreen, message);
+    }
+    
+    public String getOption(String message, String title, Icon icon, String[] options)
+    {
+        int option = JOptionPane.showOptionDialog(lastScreen, message, title, JOptionPane.DEFAULT_OPTION, icon.getCode(), null, options, options[0]);
+    
+        if(option == JOptionPane.CLOSED_OPTION)
+            return "";
+        
+        return options[option];
     }
     
     public void switchScreen(SimpleScreen newScreen)

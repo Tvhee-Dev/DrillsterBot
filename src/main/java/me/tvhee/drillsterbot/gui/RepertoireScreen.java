@@ -23,7 +23,6 @@ import java.util.List;
 public class RepertoireScreen implements SimpleScreen
 {
     private DrillsterBotGUI gui;
-    private JLabel titleLabel;
     
     @Override
     public JPanel create(DrillsterBotGUI gui)
@@ -36,8 +35,8 @@ public class RepertoireScreen implements SimpleScreen
             List<Drillable> repertoire = api.getRepertoire();
             List<JButton> drillButtons = new ArrayList<>();
             
-            this.titleLabel = new JLabel("Kies een Drill / Course");
-            this.titleLabel.setFont(new Font(null, Font.PLAIN, 18));
+            JLabel titleLabel = new JLabel("Kies een Drill / Course");
+            titleLabel.setFont(new Font(null, Font.PLAIN, 18));
             
             for(Drillable drillable : repertoire)
             {
@@ -55,7 +54,7 @@ public class RepertoireScreen implements SimpleScreen
             JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
             panel.setOpaque(true);
             panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 10, 30));
-            panel.add(this.titleLabel, new GridCell(0, 0).toConstraints());
+            panel.add(titleLabel, new GridCell(0, 0).toConstraints());
             
             JPanel repertoirePane = new JPanel(new GridLayout(0, 1, 0, 10));
             

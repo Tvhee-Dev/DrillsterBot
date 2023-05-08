@@ -10,6 +10,7 @@ import java.io.File;
 public class DrillsterBot
 {
     private static final Wordlist wordlist = new Wordlist();
+    private static final DrillsterBotGUI GUI = new DrillsterBotGUI();
     private static DrillsterAPI drillsterAPI;
     
     public static void main(String[] args)
@@ -30,8 +31,7 @@ public class DrillsterBot
         wordlist.createIfNotExists();
         wordlist.readFile();
         
-        DrillsterBotGUI gui = new DrillsterBotGUI();
-        gui.switchScreen(new LoginScreen());
+        GUI.switchScreen(new LoginScreen());
     }
     
     public static void setDrillsterAPI(DrillsterAPI api)
@@ -47,5 +47,10 @@ public class DrillsterBot
     public static Wordlist getWordlist()
     {
         return wordlist;
+    }
+    
+    public static DrillsterBotGUI getGUI()
+    {
+        return GUI;
     }
 }
