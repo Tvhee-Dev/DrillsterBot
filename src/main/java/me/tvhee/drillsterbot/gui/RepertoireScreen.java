@@ -17,7 +17,8 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 public class RepertoireScreen implements SimpleScreen
@@ -83,13 +84,17 @@ public class RepertoireScreen implements SimpleScreen
     {
         if(drillable.isCourse())
         {
-            this.gui.switchScreen(new PlayableScreen(drillable));
+            gui.switchScreen(new PlayableScreen(drillable));
         }
         else
         {
             DrillsterAPI api = DrillsterBot.getDrillsterAPI();
             Playable playable = api.getPlayable(drillable);
-            this.gui.switchScreen(new DoingDrillScreen(Arrays.asList(playable)));
+            
+            if(playable == null || !playable.isCourse())
+                gui.switchScreen(new RepertoireScreen());
+            
+            gui.switchScreen(new DoingDrillScreen(new HashSet<>(Collections.singletonList(playable))));
         }
     }
 }

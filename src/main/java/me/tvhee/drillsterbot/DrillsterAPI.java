@@ -12,14 +12,18 @@ import me.tvhee.drillsterbot.run.Question;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -74,7 +78,8 @@ public class DrillsterAPI
         String id = playable.get("id").getAsString();
         
         //results section - only in courses
-        List<Playable> subPlayables = new ArrayList<>();
+        Set<Playable> subPlayables = new HashSet<>();
+        boolean all100Percent = true;
         
         for(JsonElement stepElement : json.get("results").getAsJsonArray())
         {
@@ -94,8 +99,17 @@ public class DrillsterAPI
                 //proficiency section
                 int subProficiency = resultObject.get("proficiency").getAsJsonObject().get("productive").getAsInt();
                 
+                if(subProficiency < 100)
+                    all100Percent = false;
+                
                 subPlayables.add(new Playable(subName, subPlayableType, subProficiency, subId));
             }
+        }
+        
+        if(all100Percent)
+        {
+            DrillsterBot.getGUI().showMessage("Course was already fully completed!", "Completed!", Icon.WARNING_MESSAGE);
+            return null;
         }
         
         return new Playable(name, playableType, proficiency, id, subPlayables);
@@ -143,7 +157,6 @@ public class DrillsterAPI
             {
                 connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                 connection.setRequestProperty("Content-Length", String.valueOf(data.length()));
-                connection.setRequestProperty("charset", "utf-8");
                 connection.setRequestMethod("PUT");
                 connection.setDoOutput(true);
                 
@@ -163,6 +176,7 @@ public class DrillsterAPI
         return sendRequest(request, connection -> {
             try
             {
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
                 connection.setRequestMethod("GET");
             }
             catch(ProtocolException e)
@@ -199,20 +213,24 @@ public class DrillsterAPI
                 }
             }
             
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            String inputLine;
+            InputStream inputStream = connection.getInputStream();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+            StringBuilder result = new StringBuilder();
+            String line;
             
-            StringBuilder content = new StringBuilder();
+            while((line = reader.readLine()) != null)
+                result.append(line);
             
-            while((inputLine = reader.readLine()) != null)
-                content.append(inputLine);
-            
-            reader.close();
-            connection.disconnect();
-            return content.toString();
+            return result.toString();
         }
         catch(Exception ex)
         {
+            if(ex instanceof UnknownHostException)
+            {
+                DrillsterBot.getGUI().showMessage("DrillsterBot has lost any connection to the internet!", "Unknown Host", Icon.ERROR_MESSAGE);
+                System.exit(0);
+            }
+            
             ex.printStackTrace();
             return "";
         }

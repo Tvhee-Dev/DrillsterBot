@@ -17,7 +17,6 @@ import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Image;
-import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 public class DoingDrillScreen implements SimpleScreen, Runnable
 {
-    private final List<Playable> playables;
+    private final Set<Playable> playables;
     private DrillsterBotGUI gui;
     private JLabel titleLabel;
     private JProgressBar progressbar;
@@ -39,10 +38,10 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
     private JButton startButton;
     private JButton stopButton;
     
-    public DoingDrillScreen(List<Playable> playables)
+    public DoingDrillScreen(Set<Playable> playables)
     {
         playables.removeIf(playable -> playable.getProficiency() >= 100);
-        this.playables = Collections.unmodifiableList(playables);
+        this.playables = Collections.unmodifiableSet(playables);
     }
     
     @Override
@@ -70,8 +69,7 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
             
             this.startButton = new JButton("Start");
             this.startButton.setFont(new Font(null, Font.PLAIN, 18));
-            this.startButton.addActionListener((e) ->
-            {
+            this.startButton.addActionListener((e) -> {
                 buttonPanel.remove(this.startButton);
                 gui.refresh();
                 new Thread(this).start();
@@ -119,8 +117,7 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
         
         //Saving the wordlist every 10 seconds
         ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(() ->
-        {
+        executor.scheduleAtFixedRate(() -> {
             wordlist.saveFile();
             
             if(completedDrills.size() == playables.size())
@@ -136,42 +133,42 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
         
         for(Playable playable : playables)
         {
-            //10 threads per drill
-            for(int i = 0; i < 10; i++)
+            new Thread(() ->
             {
-                new Thread(() ->
+                int thisDrillPercentage = 0;
+                
+                while(thisDrillPercentage < 100)
                 {
-                    int thisDrillPercentage = 0;
+                    Answer answer = api.answer(playable, wordlist::getAnswer);
+                    wordlist.saveAnswer(answer);
                     
-                    while(thisDrillPercentage < 100)
-                    {
-                        Answer answer = api.answer(playable, wordlist::getAnswer);
-                        wordlist.saveAnswer(answer);
-                        
-                        thisDrillPercentage = answer.getProficiency();
-                        progress.put(playable.getId(), thisDrillPercentage);
-                        List<Integer> percentages = new ArrayList<>(progress.values());
-                        
-                        double totalPercentage = 0;
-                        
-                        for(int drillPercentage : percentages)
-                            totalPercentage += drillPercentage;
-                        
-                        totalPercentage = totalPercentage / percentages.size();
-                        
-                        double deltaPercentageGained = totalPercentage - startPercentage;
-                        double deltaPercentage = 100 - startPercentage;
-                        double drillPercentage = (deltaPercentageGained / deltaPercentage) * 100;
-                        
-                        this.progressbar.setValue((int) Math.round(drillPercentage));
-                        gui.refresh();
-                    }
+                    thisDrillPercentage = answer.getProficiency();
+                    progress.put(playable.getId(), thisDrillPercentage);
+                    List<Integer> percentages = new ArrayList<>(progress.values());
                     
-                    completedDrills.add(playable.getId());
-                    this.progressLabel.setText("Completed: " + completedDrills.size() + "/" + playables.size());
-                    this.gui.refresh();
-                }).start();
-            }
+                    double totalPercentage = 0;
+                    
+                    for(int drillPercentage : percentages)
+                        totalPercentage += drillPercentage;
+                    
+                    totalPercentage = totalPercentage / percentages.size();
+                    
+                    double deltaPercentageGained = totalPercentage - startPercentage;
+                    double deltaPercentage = 100 - startPercentage;
+                    double drillPercentage = (deltaPercentageGained / deltaPercentage) * 100;
+                    
+                    int progressValue = (int) Math.round(drillPercentage);
+                    
+                    if(progressValue > this.progressbar.getValue())
+                        this.progressbar.setValue(progressValue);
+                    
+                    gui.refresh();
+                }
+                
+                completedDrills.add(playable.getId());
+                this.progressLabel.setText("Completed: " + completedDrills.size() + "/" + playables.size());
+                this.gui.refresh();
+            }).start();
         }
     }
 }

@@ -19,16 +19,18 @@ import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
-import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class PlayableScreen implements SimpleScreen
 {
     private final Drillable drillable;
     private DrillsterBotGUI gui;
-    private JLabel titleLabel;
     
     public PlayableScreen(Drillable drillable)
     {
@@ -45,15 +47,25 @@ public class PlayableScreen implements SimpleScreen
             DrillsterAPI api = DrillsterBot.getDrillsterAPI();
             Playable playable = api.getPlayable(drillable);
             
-            if(!playable.isCourse())
+            if(playable == null || !playable.isCourse())
+            {
+                new Timer().schedule(new TimerTask() {
+                    @Override
+                    public void run()
+                    {
+                        gui.switchScreen(new RepertoireScreen());
+                    }
+                }, new Date(System.currentTimeMillis() + 10)); //0.01 sec later
+                
                 return new JPanel();
+            }
             
-            List<Playable> subPlayables = playable.getSubPlayables();
-            List<JLabel> selectablePlayables = new ArrayList<>();
+            Set<Playable> subPlayables = playable.getSubPlayables();
+            Set<JLabel> selectablePlayables = new HashSet<>();
             Map<Playable, JCheckBox> checkedPlayables = new HashMap<>();
             
-            this.titleLabel = new JLabel("Select Playables...");
-            this.titleLabel.setFont(new Font(null, Font.PLAIN, 18));
+            JLabel titleLabel = new JLabel("Select Playables...");
+            titleLabel.setFont(new Font(null, Font.PLAIN, 18));
             
             for(Playable subPlayable : subPlayables)
             {
@@ -83,7 +95,7 @@ public class PlayableScreen implements SimpleScreen
             JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
             panel.setOpaque(true);
             panel.setBorder(BorderFactory.createEmptyBorder(30, 30, 10, 30));
-            panel.add(this.titleLabel, new GridCell(0, 0).toConstraints());
+            panel.add(titleLabel, new GridCell(0, 0).toConstraints());
             
             JPanel playablePane = new JPanel(new GridLayout(0, 1, 0, 10));
             playablePane.setOpaque(true);
@@ -124,7 +136,7 @@ public class PlayableScreen implements SimpleScreen
     
     private void selectionActionPerformed(ActionEvent e, Map<Playable, JCheckBox> checkedPlayables)
     {
-        List<Playable> selectedPlayables = new ArrayList<>();
+        Set<Playable> selectedPlayables = new HashSet<>();
         
         for(Map.Entry<Playable, JCheckBox> playableEntry : checkedPlayables.entrySet())
         {
@@ -135,7 +147,7 @@ public class PlayableScreen implements SimpleScreen
         this.gui.switchScreen(new DoingDrillScreen(selectedPlayables));
     }
     
-    private void allActionPerformed(ActionEvent e, List<Playable> playables)
+    private void allActionPerformed(ActionEvent e, Set<Playable> playables)
     {
         this.gui.switchScreen(new DoingDrillScreen(playables));
     }

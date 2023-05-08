@@ -1,5 +1,7 @@
 package me.tvhee.drillsterbot.drill;
 
+import java.util.Objects;
+
 public class Drillable
 {
     private final String name;
@@ -33,5 +35,24 @@ public class Drillable
     public String getId()
     {
         return id;
+    }
+    
+    @Override
+    public boolean equals(Object o)
+    {
+        if(this == o)
+            return true;
+        
+        if(o == null || getClass() != o.getClass())
+            return false;
+        
+        Drillable drillable = (Drillable) o;
+        return Objects.equals(id, drillable.id);
+    }
+    
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(id);
     }
 }

@@ -8,13 +8,13 @@ import me.tvhee.drillsterbot.run.Answer;
 import me.tvhee.drillsterbot.run.Question;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-import java.util.Scanner;
 
 public class Wordlist
 {
@@ -79,20 +79,15 @@ public class Wordlist
     {
         try
         {
-            Scanner reader = new Scanner(this.wordListFile);
-            
-            if(!reader.hasNext())
-                return;
-            
-            byte[] data = reader.nextLine().getBytes();
+            byte[] data = Files.readAllBytes(this.wordListFile.toPath());
             
             if(data.length == 0)
                 return;
             
             byte[] decodedData = Base64.getDecoder().decode(data);
-            this.wordlist = JsonParser.parseString(new String(decodedData)).getAsJsonObject();
+            this.wordlist = JsonParser.parseString(new String(decodedData, StandardCharsets.UTF_8)).getAsJsonObject();
         }
-        catch(FileNotFoundException e)
+        catch(IOException e)
         {
             e.printStackTrace();
         }
@@ -100,14 +95,15 @@ public class Wordlist
     
     public void saveFile()
     {
-        byte[] data = this.wordlist.toString().getBytes();
-        byte[] encodedData = Base64.getEncoder().encode(data);
-        
         try
         {
-            FileWriter fileWriter = new FileWriter(this.wordListFile, false);
-            fileWriter.write(new String(encodedData));
-            fileWriter.close();
+            byte[] data = this.wordlist.toString().getBytes(StandardCharsets.UTF_8);
+            String encodedData = Base64.getEncoder().encodeToString(data);
+            
+            FileOutputStream outputStream = new FileOutputStream(this.wordListFile, false);
+            outputStream.write(encodedData.getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
+            outputStream.close();
         }
         catch(IOException e)
         {

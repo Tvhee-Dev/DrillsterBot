@@ -20,7 +20,6 @@ public class DrillsterBotGUI
     public DrillsterBotGUI()
     {
         this.frame = new JFrame("DrillsterBot");
-        this.create();
     }
     
     public void showMessage(String message, String title, Icon icon)
@@ -45,6 +44,12 @@ public class DrillsterBotGUI
     
     public void switchScreen(SimpleScreen newScreen)
     {
+        boolean firstLoading = this.lastScreen == null;
+        
+        //First screen loading
+        if(firstLoading)
+            this.create();
+        
         if(this.lastScreen != null)
             this.frame.remove(lastScreen);
         
@@ -53,8 +58,11 @@ public class DrillsterBotGUI
         this.frame.add(panel, BorderLayout.CENTER);
         this.frame.pack();
         
-        if(this.lastScreen == null)
+        if(firstLoading)
+        {
             this.frame.setLocationRelativeTo(null);
+            this.frame.setVisible(true);
+        }
         
         this.lastScreen = panel;
     }
@@ -84,8 +92,6 @@ public class DrillsterBotGUI
             this.frame.setLayout(new BorderLayout());
             this.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             this.frame.setPreferredSize(new Dimension(800, 600));
-            this.frame.pack();
-            this.frame.setVisible(true);
         }
         catch(Exception ignored)
         {
