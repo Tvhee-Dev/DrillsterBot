@@ -126,7 +126,7 @@ public class DrillsterAPI
         //tell section
         String column = questionJson.get("tell").getAsJsonObject().get("name").getAsString();
         String questionString = ask.get("term").getAsJsonObject().get("value").getAsString();
-        Question question = new Question(id, column, questionString);
+        Question question = new Question(playable, id, column, questionString);
         
         StringBuilder answerBuilder = new StringBuilder();
         List<String> answersToSet = answerFunction.apply(question);

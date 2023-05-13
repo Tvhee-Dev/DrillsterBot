@@ -43,10 +43,17 @@ public class Wordlist
     
     public List<String> getAnswer(Question question)
     {
-        if(wordlist.get(question.getName()) == null)
+        Playable playable = question.getPlayable();
+        
+        if(wordlist.get(playable.getId()) == null)
             return new ArrayList<>();
         
-        JsonObject answers = wordlist.get(question.getName()).getAsJsonObject();
+        JsonObject drill = wordlist.get(playable.getId()).getAsJsonObject();
+        
+        if(drill.get(question.getName()) == null)
+            return new ArrayList<>();
+        
+        JsonObject answers = drill.get(question.getName()).getAsJsonObject();
         
         if(!answers.has(question.getColumn()))
             return new ArrayList<>();
@@ -62,10 +69,16 @@ public class Wordlist
     public void saveAnswer(Answer answer)
     {
         Question question = answer.getQuestion();
+        Playable playable = question.getPlayable();
+        
+        JsonObject drill = new JsonObject();
         JsonObject answers = new JsonObject();
         
-        if(wordlist.get(question.getName()) != null)
-            answers = wordlist.get(question.getName()).getAsJsonObject();
+        if(wordlist.get(playable.getId()) != null)
+            drill = wordlist.get(playable.getId()).getAsJsonObject();
+        
+        if(drill.get(question.getName()) != null)
+            answers = drill.get(question.getName()).getAsJsonObject();
         
         JsonArray requiredAnswers = new JsonArray();
         
@@ -73,7 +86,8 @@ public class Wordlist
             requiredAnswers.add(requiredAnswer);
         
         answers.add(question.getColumn(), requiredAnswers);
-        wordlist.add(question.getName(), answers);
+        drill.add(question.getName(), answers);
+        wordlist.add(playable.getId(), drill);
     }
     
     public void readFile()
