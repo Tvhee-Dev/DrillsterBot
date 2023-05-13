@@ -43,7 +43,7 @@ public class Wordlist
     
     public List<String> getAnswer(Question question)
     {
-        if(!wordlist.has(question.getName()))
+        if(wordlist.get(question.getName()) == null)
             return new ArrayList<>();
         
         JsonObject answers = wordlist.get(question.getName()).getAsJsonObject();
@@ -61,18 +61,19 @@ public class Wordlist
     
     public void saveAnswer(Answer answer)
     {
+        Question question = answer.getQuestion();
         JsonObject answers = new JsonObject();
         
-        if(wordlist.has(answer.getQuestion().getName()))
-            answers = wordlist.get(answer.getQuestion().getName()).getAsJsonObject();
+        if(wordlist.get(question.getName()) != null)
+            answers = wordlist.get(question.getName()).getAsJsonObject();
         
         JsonArray requiredAnswers = new JsonArray();
         
         for(String requiredAnswer : answer.getCorrectAnswers())
             requiredAnswers.add(requiredAnswer);
         
-        answers.add(answer.getQuestion().getColumn(), requiredAnswers);
-        wordlist.add(answer.getQuestion().getName(), answers);
+        answers.add(question.getColumn(), requiredAnswers);
+        wordlist.add(question.getName(), answers);
     }
     
     public void readFile()

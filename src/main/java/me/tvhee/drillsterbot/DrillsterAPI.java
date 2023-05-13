@@ -66,7 +66,7 @@ public class DrillsterAPI
     {
         JsonObject json = JsonParser.parseString(sendGetRequest("3/results?playable=" + drillable.getId())).getAsJsonObject();
         //proficiency section - also available for normal drills
-        int proficiency = json.get("proficiency").getAsJsonObject().get("productive").getAsInt();
+        int proficiency = json.get("proficiency").getAsJsonObject().get("overall").getAsInt();
         
         if(!drillable.isCourse())
             return new Playable(drillable.getName(), "DRILL", proficiency, drillable.getId());
@@ -97,7 +97,7 @@ public class DrillsterAPI
                 String subPlayableType = subPlayable.get("type").getAsString();
                 String subId = subPlayable.get("id").getAsString();
                 //proficiency section
-                int subProficiency = resultObject.get("proficiency").getAsJsonObject().get("productive").getAsInt();
+                int subProficiency = resultObject.get("proficiency").getAsJsonObject().get("overall").getAsInt();
                 
                 if(subProficiency < 100)
                     all100Percent = false;
@@ -232,7 +232,7 @@ public class DrillsterAPI
             }
             
             ex.printStackTrace();
-            return "";
+            return "{}";
         }
     }
 }

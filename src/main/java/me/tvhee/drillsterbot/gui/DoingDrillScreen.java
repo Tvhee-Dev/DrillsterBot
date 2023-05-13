@@ -69,7 +69,8 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
             
             this.startButton = new JButton("Start");
             this.startButton.setFont(new Font(null, Font.PLAIN, 18));
-            this.startButton.addActionListener((e) -> {
+            this.startButton.addActionListener((e) ->
+            {
                 buttonPanel.remove(this.startButton);
                 gui.refresh();
                 new Thread(this).start();
@@ -117,7 +118,8 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
         
         //Saving the wordlist every 10 seconds
         ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(() -> {
+        executor.scheduleAtFixedRate(() ->
+        {
             wordlist.saveFile();
             
             if(completedDrills.size() == playables.size())
@@ -133,42 +135,45 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
         
         for(Playable playable : playables)
         {
-            new Thread(() ->
+            for(int i = 0; i < 10; i++)
             {
-                int thisDrillPercentage = 0;
-                
-                while(thisDrillPercentage < 100)
+                new Thread(() ->
                 {
-                    Answer answer = api.answer(playable, wordlist::getAnswer);
-                    wordlist.saveAnswer(answer);
+                    int thisDrillPercentage = 0;
                     
-                    thisDrillPercentage = answer.getProficiency();
-                    progress.put(playable.getId(), thisDrillPercentage);
-                    List<Integer> percentages = new ArrayList<>(progress.values());
+                    while(thisDrillPercentage < 100)
+                    {
+                        Answer answer = api.answer(playable, wordlist::getAnswer);
+                        wordlist.saveAnswer(answer);
+                        
+                        thisDrillPercentage = answer.getProficiency();
+                        progress.put(playable.getId(), thisDrillPercentage);
+                        List<Integer> percentages = new ArrayList<>(progress.values());
+                        
+                        double totalPercentage = 0;
+                        
+                        for(int drillPercentage : percentages)
+                            totalPercentage += drillPercentage;
+                        
+                        totalPercentage = totalPercentage / percentages.size();
+                        
+                        double deltaPercentageGained = totalPercentage - startPercentage;
+                        double deltaPercentage = 100 - startPercentage;
+                        double drillPercentage = (deltaPercentageGained / deltaPercentage) * 100;
+                        
+                        int progressValue = (int) Math.round(drillPercentage);
+                        
+                        if(progressValue > this.progressbar.getValue())
+                            this.progressbar.setValue(progressValue);
+                        
+                        gui.refresh();
+                    }
                     
-                    double totalPercentage = 0;
-                    
-                    for(int drillPercentage : percentages)
-                        totalPercentage += drillPercentage;
-                    
-                    totalPercentage = totalPercentage / percentages.size();
-                    
-                    double deltaPercentageGained = totalPercentage - startPercentage;
-                    double deltaPercentage = 100 - startPercentage;
-                    double drillPercentage = (deltaPercentageGained / deltaPercentage) * 100;
-                    
-                    int progressValue = (int) Math.round(drillPercentage);
-                    
-                    if(progressValue > this.progressbar.getValue())
-                        this.progressbar.setValue(progressValue);
-                    
-                    gui.refresh();
-                }
-                
-                completedDrills.add(playable.getId());
-                this.progressLabel.setText("Completed: " + completedDrills.size() + "/" + playables.size());
-                this.gui.refresh();
-            }).start();
+                    completedDrills.add(playable.getId());
+                    this.progressLabel.setText("Completed: " + completedDrills.size() + "/" + playables.size());
+                    this.gui.refresh();
+                }).start();
+            }
         }
     }
 }
