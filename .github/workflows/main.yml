@@ -1,0 +1,41 @@
+name: Build installer executable
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install pyinstaller && pip install -r DrillsterBotInstaller/src/requirements.txt
+      - name: Build executable
+        run: pyinstaller -i DrillsterBotInstaller/src/icon.ico --hidden-import=jinxed.terminfo.vtwin10 --onefile DrillsterBotInstaller/src/main.py -n DrillsterBotInstaller.exe
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: DrillsterBotInstaller.exe
+          path: dist/DrillsterBotInstaller.exe
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: DrillsterBotInstaller.exe
+          path: ./
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: DrillsterBotInstaller.exe
+      - name: Done
+        run: echo Done
