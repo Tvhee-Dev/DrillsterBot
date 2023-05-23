@@ -20,7 +20,7 @@ import java.util.Base64;
 
 public class AutoUpdater
 {
-    private static final String CURRENT_VERSION = "v3.0.0";
+    private static final String CURRENT_VERSION = "v3.0.1";
     
     public static boolean checkForUpdates()
     {
