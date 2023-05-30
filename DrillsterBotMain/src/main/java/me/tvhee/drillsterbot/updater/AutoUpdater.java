@@ -1,7 +1,9 @@
 package me.tvhee.drillsterbot.updater;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonArray;
 import me.tvhee.drillsterbot.DrillsterBot;
 import me.tvhee.drillsterbot.gui.UpdatingGUI;
 
@@ -20,7 +22,7 @@ import java.util.Base64;
 
 public class AutoUpdater
 {
-    private static final String CURRENT_VERSION = "v3.0.1";
+    private static final String CURRENT_VERSION = "v3.0.2";
     
     public static boolean checkForUpdates()
     {
@@ -51,32 +53,44 @@ public class AutoUpdater
             connection.setRequestMethod("GET");
             
             BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            JsonObject response = JsonParser.parseReader(reader).getAsJsonArray().get(0).getAsJsonObject();
-            String latestVersion = response.get("tag_name").getAsString();
+			JsonObject version = JsonParser.parseReader(reader).getAsJsonArray().get(0).getAsJsonObject();
+            String latestVersion = version.get("tag_name").getAsString();
             
             if(latestVersion.equals(CURRENT_VERSION) || !latestVersion.startsWith("v3"))
                 return false; //No update available
             
             DrillsterBot.getGUI().switchScreen(new UpdatingGUI());
+            JsonArray assets = version.get("assets").getAsJsonArray();
+
+			for(JsonElement assetElement : assets)
+            {
+                JsonObject asset = assetElement.getAsJsonObject();
+                String name = asset.get("name").getAsString();
+                
+                if(!name.endsWith(".java"))
+                    continue;
+
+                String downloadLink = asset.get("browser_download_url").getAsString();
+                connection = (HttpURLConnection) new URL(downloadLink).openConnection();
+                ReadableByteChannel channel = Channels.newChannel(connection.getInputStream());
             
-            String downloadLink = response.get("assets").getAsJsonArray().get(0).getAsJsonObject().get("browser_download_url").getAsString();
-            connection = (HttpURLConnection) new URL(downloadLink).openConnection();
-            ReadableByteChannel channel = Channels.newChannel(connection.getInputStream());
+                File destination = new File(thisJarFile.getParentFile(), "DrillsterBot-" + latestVersion.substring(1) + ".jar");
+                FileOutputStream output = new FileOutputStream(destination);
             
-            File destination = new File(thisJarFile.getParentFile(), "DrillsterBot-" + latestVersion.substring(1) + ".jar");
-            FileOutputStream output = new FileOutputStream(destination);
+                output.getChannel().transferFrom(channel, 0, Long.MAX_VALUE);
+                output.flush();
+                output.close();
             
-            output.getChannel().transferFrom(channel, 0, Long.MAX_VALUE);
-            output.flush();
-            output.close();
+                FileWriter fileWriter = new FileWriter(removeInstruction, false);
+                fileWriter.write(new String(Base64.getEncoder().encode(thisJarFile.getAbsolutePath().getBytes())));
+                fileWriter.flush();
+                fileWriter.close();
             
-            FileWriter fileWriter = new FileWriter(removeInstruction, false);
-            fileWriter.write(new String(Base64.getEncoder().encode(thisJarFile.getAbsolutePath().getBytes())));
-            fileWriter.flush();
-            fileWriter.close();
-            
-            Runtime.getRuntime().exec("java -jar \"" + destination.getAbsolutePath() + "\"");
-            return true;
+                Runtime.getRuntime().exec("java -jar \"" + destination.getAbsolutePath() + "\"");
+                return true;
+			}
+			
+			return false;
         }
         catch(Exception e)
         {
