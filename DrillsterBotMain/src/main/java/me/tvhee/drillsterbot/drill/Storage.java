@@ -16,14 +16,27 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
-public class Wordlist
+public class Storage
 {
     private final File wordListFile;
-    private JsonObject wordlist = new JsonObject();
+    private JsonObject data = new JsonObject();
     
-    public Wordlist()
+    public Storage()
     {
         this.wordListFile = new File(System.getProperty("user.home"), ".drillsterbot");
+    }
+    
+    public void saveToken(String token)
+    {
+        if(token == null)
+            this.data.remove("token");
+        else
+            this.data.addProperty("token", token);
+    }
+    
+    public String getToken()
+    {
+        return this.data.has("token") ? this.data.get("token").getAsString() : null;
     }
     
     public void createIfNotExists()
@@ -45,10 +58,10 @@ public class Wordlist
     {
         Playable playable = question.getPlayable();
         
-        if(wordlist.get(playable.getId()) == null)
+        if(data.get(playable.getId()) == null)
             return new ArrayList<>();
         
-        JsonObject drill = wordlist.get(playable.getId()).getAsJsonObject();
+        JsonObject drill = data.get(playable.getId()).getAsJsonObject();
         
         if(drill.get(question.getName()) == null)
             return new ArrayList<>();
@@ -74,8 +87,8 @@ public class Wordlist
         JsonObject drill = new JsonObject();
         JsonObject answers = new JsonObject();
         
-        if(wordlist.get(playable.getId()) != null)
-            drill = wordlist.get(playable.getId()).getAsJsonObject();
+        if(data.get(playable.getId()) != null)
+            drill = data.get(playable.getId()).getAsJsonObject();
         
         if(drill.get(question.getName()) != null)
             answers = drill.get(question.getName()).getAsJsonObject();
@@ -87,7 +100,7 @@ public class Wordlist
         
         answers.add(question.getColumn(), requiredAnswers);
         drill.add(question.getName(), answers);
-        wordlist.add(playable.getId(), drill);
+        data.add(playable.getId(), drill);
     }
     
     public void readFile()
@@ -100,7 +113,7 @@ public class Wordlist
                 return;
             
             byte[] decodedData = Base64.getDecoder().decode(data);
-            this.wordlist = JsonParser.parseString(new String(decodedData, StandardCharsets.UTF_8)).getAsJsonObject();
+            this.data = JsonParser.parseString(new String(decodedData, StandardCharsets.UTF_8)).getAsJsonObject();
         }
         catch(IOException e)
         {
@@ -112,7 +125,7 @@ public class Wordlist
     {
         try
         {
-            byte[] data = this.wordlist.toString().getBytes(StandardCharsets.UTF_8);
+            byte[] data = this.data.toString().getBytes(StandardCharsets.UTF_8);
             String encodedData = Base64.getEncoder().encodeToString(data);
             
             FileOutputStream outputStream = new FileOutputStream(this.wordListFile, false);

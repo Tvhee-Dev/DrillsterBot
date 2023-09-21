@@ -111,18 +111,23 @@ public class PlayableScreen implements SimpleScreen
             scrollPane.getVerticalScrollBar().setUnitIncrement(10);
             playableTab.add(scrollPane);
             
-            panel.add(playableTab, new GridCell(0, 1).setInsets(10).toConstraints());
+            panel.add(playableTab, new GridCell(0, 2).setInsets(10).toConstraints());
             
-            JButton playAll = new JButton("Play All");
+            JButton backButton = new JButton("Go back");
+            backButton.setFont(new Font(null, Font.PLAIN, 18));
+            backButton.addActionListener(e -> gui.switchScreen(new RepertoireScreen()));
+            
+            JButton playAll = new JButton("Play all");
             playAll.setFont(new Font(null, Font.PLAIN, 18));
             playAll.addActionListener((e) -> allActionPerformed(e, subPlayables));
             
-            JButton playSelection = new JButton("Play Selection");
+            JButton playSelection = new JButton("Play selection");
             playSelection.setFont(new Font(null, Font.PLAIN, 18));
             playSelection.addActionListener((e) -> selectionActionPerformed(e, checkedPlayables));
             
-            panel.add(playAll, new GridCell(0, 2).setInsets(10).toConstraints());
-            panel.add(playSelection, new GridCell(1, 2).setInsets(10).toConstraints());
+            panel.add(backButton, new GridCell(0, 2).setInsets(10).toConstraints());
+            panel.add(playAll, new GridCell(1, 2).setInsets(10).toConstraints());
+            panel.add(playSelection, new GridCell(2, 2).setInsets(10).toConstraints());
             
             return panel;
         }

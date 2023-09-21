@@ -32,6 +32,11 @@
             <artifactId>platform</artifactId>
             <version>3.5.2</version>
         </dependency>
+        <dependency>
+            <groupId>me.tvhee</groupId>
+            <artifactId>SimpleSockets</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>

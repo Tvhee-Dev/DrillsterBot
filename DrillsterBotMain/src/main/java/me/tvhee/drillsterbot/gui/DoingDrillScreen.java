@@ -9,7 +9,7 @@ import javax.swing.JProgressBar;
 import me.tvhee.drillsterbot.DrillsterAPI;
 import me.tvhee.drillsterbot.DrillsterBot;
 import me.tvhee.drillsterbot.drill.Playable;
-import me.tvhee.drillsterbot.drill.Wordlist;
+import me.tvhee.drillsterbot.drill.Storage;
 import me.tvhee.drillsterbot.run.Answer;
 
 import java.awt.Dimension;
@@ -78,7 +78,11 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
             
             this.stopButton = new JButton("Stop");
             this.stopButton.setFont(new Font(null, Font.PLAIN, 18));
-            this.stopButton.addActionListener((e) -> System.exit(0));
+            this.stopButton.addActionListener((e) ->
+            {
+                DrillsterBot.getGUI().showMessage("You have stopped DrillsterBot!", "Stopped", Icon.INFORMATION_MESSAGE);
+                gui.switchScreen(new RepertoireScreen());
+            });
             
             buttonPanel.add(this.startButton);
             buttonPanel.add(this.stopButton);
@@ -103,7 +107,7 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
     public void run()
     {
         DrillsterAPI api = DrillsterBot.getDrillsterAPI();
-        Wordlist wordlist = DrillsterBot.getWordlist();
+        Storage storage = DrillsterBot.getStorage();
         Map<String, Integer> progress = new HashMap<>();
         Set<String> completedDrills = new HashSet<>();
         double totalStartPercentage = 0;
@@ -120,7 +124,7 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
         ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
         executor.scheduleAtFixedRate(() ->
         {
-            wordlist.saveFile();
+            storage.saveFile();
             
             if(completedDrills.size() == playables.size())
             {
@@ -143,8 +147,8 @@ public class DoingDrillScreen implements SimpleScreen, Runnable
                     
                     while(thisDrillPercentage < 100)
                     {
-                        Answer answer = api.answer(playable, wordlist::getAnswer);
-                        wordlist.saveAnswer(answer);
+                        Answer answer = api.answer(playable, storage::getAnswer);
+                        storage.saveAnswer(answer);
                         
                         thisDrillPercentage = answer.getProficiency();
                         progress.put(playable.getId(), thisDrillPercentage);

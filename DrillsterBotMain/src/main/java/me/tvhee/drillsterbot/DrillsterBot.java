@@ -1,15 +1,20 @@
 package me.tvhee.drillsterbot;
 
-import me.tvhee.drillsterbot.drill.Wordlist;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import me.tvhee.drillsterbot.drill.Storage;
 import me.tvhee.drillsterbot.gui.LoginScreen;
 import me.tvhee.drillsterbot.gui.DrillsterBotGUI;
+import me.tvhee.drillsterbot.gui.RepertoireScreen;
 import me.tvhee.drillsterbot.updater.AutoUpdater;
 
 import java.io.File;
+import java.util.Base64;
+import java.util.Date;
 
 public class DrillsterBot
 {
-    private static final Wordlist wordlist = new Wordlist();
+    private static final Storage STORAGE = new Storage();
     private static final DrillsterBotGUI GUI = new DrillsterBotGUI();
     private static DrillsterAPI drillsterAPI;
     
@@ -24,14 +29,19 @@ public class DrillsterBot
         
         if(AutoUpdater.checkForUpdates())
         {
-            System.exit(0); //Update available, shutdown this
+            System.exit(0); //Update available, shutdown this instance
             return;
         }
         
-        wordlist.createIfNotExists();
-        wordlist.readFile();
+        STORAGE.createIfNotExists();
+        STORAGE.readFile();
         
-        GUI.switchScreen(new LoginScreen());
+        String storedToken = STORAGE.getToken();
+        
+        if(storedToken != null && validateToken(storedToken))
+            GUI.switchScreen(new RepertoireScreen());
+        else
+            GUI.switchScreen(new LoginScreen());
     }
     
     public static void setDrillsterAPI(DrillsterAPI api)
@@ -44,13 +54,24 @@ public class DrillsterBot
         return drillsterAPI;
     }
     
-    public static Wordlist getWordlist()
+    public static Storage getStorage()
     {
-        return wordlist;
+        return STORAGE;
     }
     
     public static DrillsterBotGUI getGUI()
     {
         return GUI;
+    }
+    
+    private static boolean validateToken(String token) {
+        JsonObject tokenData = JsonParser.parseString(new String(Base64.getDecoder().decode(token.split("\\.")[1].getBytes()))).getAsJsonObject();
+        long expirationDate = tokenData.get("exp").getAsLong();
+        boolean validToken = expirationDate * 1000 > new Date().getTime();
+        
+        if(validToken)
+            setDrillsterAPI(new DrillsterAPI(getStorage().getToken()));
+        
+        return validToken;
     }
 }

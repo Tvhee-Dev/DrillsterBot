@@ -39,6 +39,16 @@ public class RepertoireScreen implements SimpleScreen
             JLabel titleLabel = new JLabel("Kies een Drill / Course");
             titleLabel.setFont(new Font(null, Font.PLAIN, 18));
             
+            JButton logoutButton = new JButton("Logout");
+            logoutButton.setFont(new Font(null, Font.PLAIN, 18));
+            logoutButton.addActionListener(e ->
+            {
+                DrillsterBot.getStorage().saveToken(null);
+                DrillsterBot.getStorage().saveFile();
+                
+                gui.switchScreen(new LoginScreen());
+            });
+            
             for(Drillable drillable : repertoire)
             {
                 if(drillable.getProficiency() >= 100)
@@ -63,13 +73,14 @@ public class RepertoireScreen implements SimpleScreen
                 repertoirePane.add(drillButton);
             
             JPanel repertoireTab = new JPanel(new BorderLayout());
-            repertoireTab.setPreferredSize(new Dimension(700, 450));
+            repertoireTab.setPreferredSize(new Dimension(700, 400));
             
             JScrollPane scrollPane = new JScrollPane(repertoirePane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             scrollPane.getVerticalScrollBar().setUnitIncrement(5);
             repertoireTab.add(scrollPane);
             
             panel.add(repertoireTab, new GridCell(0, 1).setInsets(10).toConstraints());
+            panel.add(logoutButton, new GridCell(0, 2).setInsets(10).toConstraints());
             return panel;
         }
         catch(Exception e)

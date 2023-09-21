@@ -29,7 +29,7 @@ import java.util.function.Function;
 
 public class DrillsterAPI
 {
-    private String token;
+    private final String token;
     
     public DrillsterAPI(String token)
     {
@@ -200,17 +200,10 @@ public class DrillsterAPI
             
             if(connection.getResponseCode() == 401)
             {
-                String option = DrillsterBot.getGUI().getOption("Invalid token! Please put a valid token or close the application", "Invalid token", Icon.ERROR_MESSAGE, new String[] {"Input", "Close"});
-                
-                if(option.equals("Input"))
-                {
-                    this.token = DrillsterBot.getGUI().getInput("Please put in your token:");
-                    return sendRequest(request, connectionEditor);
-                }
-                else
-                {
-                    System.exit(0);
-                }
+                DrillsterBot.getGUI().showMessage("Invalid token! Please restart the application", "Invalid token", Icon.ERROR_MESSAGE);
+                DrillsterBot.getStorage().saveToken(null);
+                DrillsterBot.getStorage().saveFile();
+                System.exit(0);
             }
             
             InputStream inputStream = connection.getInputStream();
